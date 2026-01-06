@@ -419,7 +419,7 @@ def more_and_more(message: types.Message):
     if audio_file is not None:
         bot.send_audio(message.chat.id, audio_file)
     else:
-        bot.send_document(message.chat.id, "Аудио - отсутствует")
+        bot.send_message(message.chat.id, "Аудио - отсутствует")
 
 
 @bot.message_handler(text=["Узнать о слове подробнее"])

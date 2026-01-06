@@ -391,9 +391,9 @@ def more_and_more(message: types.Message):
     else:
         transcription = ""
     if part is not None and part2 is not None and part != part2:
-        line2 = f"Часть речи - {part}, {part2}"
+        line2 += f"{part}, {part2}"
     elif part is not None:
-        f"Часть речи - {part}"
+        line2 += f"{part}"
     else:
         line2 += "отсутствует"
     if example is not None:

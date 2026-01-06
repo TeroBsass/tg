@@ -1,0 +1,14 @@
+{
+  "API": "8334622337:AAFNgQvUVKwX8FMMaJgigu6sTfX2Y7pLZSQ",
+  "file": "e_words.txt",
+  "url": "https://www.native-english.ru/grammar/english-verbs",
+  "ADMIN": [
+    7821882238,
+    6112329359
+  ],
+  "DB": "users.db",
+  "html": "learned_words.html",
+  "file2": "output_bot.txt",
+  "D_API": "f4fdb52c81fe8fa367a909b01cd12bfd",
+  "DICT": "https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
+}

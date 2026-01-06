@@ -62,6 +62,7 @@ def get_word_data(word: str):
             print(ex)
             m1 = meanings[0]
         part_of_speech = m0.get("partOfSpeech")
+        part_of_speech_2 = m1.get("partOfSpeech")
         defs = m0.get("definitions", [])
         defs2 = m1.get("definitions", [])
         if defs:
@@ -77,7 +78,8 @@ def get_word_data(word: str):
         "part_of_speech": part_of_speech,
         "definition": definition,
         "example": example,
-        "definition2": definition2
+        "definition2": definition2,
+        "part_of_speech2": part_of_speech_2
     }
 
 
@@ -365,12 +367,13 @@ def more_and_more(message: types.Message):
         bot.reply_to(message, "О таком слове у нас нет информации!!!")
         return
     line = text.strip()
-    line2 = "Часть речи - "
+    line2 = "Части речи - "
     line3 = "Пример - "
     line4 = "Значение - "
     transcription = info["transcription"]
     audio = info["audio"]
     part = info["part_of_speech"]
+    part2 = info["part_of_speech2"]
     example = info["example"]
     definition = info["definition"]
     definition2 = info["definition2"]
@@ -386,8 +389,10 @@ def more_and_more(message: types.Message):
         line += f" {translation}"
     else:
         transcription = ""
-    if part is not None:
-        line2 = f"Часть речи - {part}"
+    if part is not None and part2 is not None and part != part2:
+        line2 = f"Часть речи - {part}, {part2}"
+    elif part is not None:
+        f"Часть речи - {part}"
     else:
         line2 += "отсутствует"
     if example is not None:

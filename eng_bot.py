@@ -51,6 +51,7 @@ def get_word_data(word: str):
         audio_url = phonetics[0].get("audio")
 
     part_of_speech = None
+    part_of_speech_2 = None
     definition = None
     example = None
     definition2 = None
@@ -380,7 +381,7 @@ def more_and_more(message: types.Message):
 
     if transcription is not None:
         line += f" {transcription}"
-    if audio is not None:
+    if audio is not None and audio != "":
         audio_file = audio
     else:
         audio_file = None

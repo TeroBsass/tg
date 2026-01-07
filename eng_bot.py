@@ -4,7 +4,8 @@ from colorama import Fore, Style
 import telebot as tg
 from telebot import types, custom_filters
 import sqlite3 as sq
-import json, requests
+import json, requests, schedule
+from datetime import datetime, date
 from deep_translator import GoogleTranslator
 import detectlanguage
 
@@ -29,6 +30,7 @@ menu_state = ""
 main_state = "MAIN"
 test_state = "TEST"
 user_tests = {}
+tr_schedule = {}
 
 
 def get_word_data(word: str):
@@ -200,7 +202,7 @@ def get_ids():
     datab = sq.connect("users.db")
     curs = datab.cursor()
     curs.execute("""SELECT id FROM users""")
-    res = [row[0] for row in cur.fetchall()]
+    res = [row[0] for row in curs.fetchall()]
     datab.close()
     return res
 
@@ -499,6 +501,64 @@ def handle_broadcast(message):
             print(f"{Fore.BLUE}***Рассылка завершена***{Style.RESET_ALL}")
 
 
+def send_results():
+    datab = sq.connect(data["DB"])
+    curs = datab.cursor()
+    for i in get_ids():
+        try:
+            quiz = curs.execute("""SELECT quiz FROM users WHERE id=?""", (i, )).fetchone()
+            if quiz != "":
+                bot.send_message(i, f"В этом месяце ты заработал {quiz[0]} баллов по нашей системе оценивания.")
+            else:
+                bot.send_message(i, "Ты не решал тесты в этом месяце, уже пора начинать!!!")
+        except Exception as ex:
+            print(ex)
+
+
+def job(day):
+    today = datetime.now().day
+    if today == day:
+        send_results()
+
+
+def schedule_reminder(clock, user_day):
+    schedule.every().day.at(clock).do(job, day=user_day)
+
+
+@bot.message_handler(commands=['start_bct'])
+def bc_time(message):
+    admin_ids = [i for i in data["ADMIN"]]
+    if message.from_user.id in admin_ids:
+        user_day = int(message.text.strip().split(" ")[1])
+        clock = message.text.strip().split(" ")[2]
+        if user_day < 1 or user_day > 31:
+            bot.reply_to(message, "Неверный день. Пожалуйста, введите день от 1 до 31.")
+        else:
+            bot.reply_to(message, f"Напоминание будет срабатывать каждый {user_day}-й день месяца в {clock}.")
+            schedule_reminder(clock, user_day)
+            tr_schedule[0] = {
+                "bool": True
+            }
+            while tr_schedule[0]["bool"]:
+                schedule.run_pending()
+                time.sleep(1)
+    else:
+        bot.reply_to(message, "У вас нет прав на совершение данной команды!!!")
+
+
+@bot.message_handler(commands=['end_bct'])
+def end_bct(message):
+    admin_ids = [i for i in data["ADMIN"]]
+    if message.from_user.id in admin_ids:
+        schedule.clear()
+        tr_schedule[0]["bool"] = False
+        bot.reply_to(message, "Все планированные рассылки отменены!!!")
+    else:
+        bot.reply_to(message, "У вас нет прав на совершение данной команды!!!")
+
+
+
+
 def worded(line):
     if "[" in line:
         word = line.split("[")[0]
@@ -518,6 +578,10 @@ def send_next_question(chat_id):
     amount = state["amount"]
     correct = state["count"]
     number = state["number"]
+    datab = sq.connect(data["DB"])
+    curs = datab.cursor()
+    quiz = curs.execute("""SELECT quiz FROM users WHERE id=?""", (chat_id,)).fetchone()
+
 
     if pos >= len(word_indexes):
         if number != 1:
@@ -532,9 +596,25 @@ def send_next_question(chat_id):
         elif amount // 3 < correct <= amount // 2:
             bot.send_message(chat_id, "Твой результат неплох.")
             bot.send_message(chat_id, "Но у тебя были ошибки, для закрепления повтори слова еще раз.")
+            if number == 3:
+                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz + 1, chat_id))
+            elif number == 2:
+                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz + 2, chat_id))
+            else:
+                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz + 3, chat_id))
         else:
             bot.send_message(chat_id, "Ты молодец!!!!")
             bot.send_message(chat_id, "Двигайся в том же направление!!!")
+            if number == 3:
+                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz + 2, chat_id))
+                datab.commit()
+                datab.close()
+            elif number == 2:
+                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz + 3, chat_id))
+            else:
+                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz + 4, chat_id))
+        datab.commit()
+        datab.close()
         user_tests.pop(chat_id, None)
         print(f"{Fore.RED}{chat_id}{Style.RESET_ALL} завершил тест...")
         return

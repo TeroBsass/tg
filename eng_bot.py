@@ -643,6 +643,7 @@ def send_next_question(chat_id):
     datab = sq.connect(data["DB"])
     curs = datab.cursor()
     quiz = curs.execute("""SELECT quiz FROM users WHERE id=?""", (chat_id,)).fetchone()
+    quiz_v = int(quiz[0]) if quiz else 0
 
 
     if pos >= len(word_indexes):
@@ -659,22 +660,22 @@ def send_next_question(chat_id):
             bot.send_message(chat_id, "Твой результат неплох.")
             bot.send_message(chat_id, "Но у тебя были ошибки, для закрепления повтори слова еще раз.")
             if number == 3:
-                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz + 1, chat_id))
+                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 1, chat_id))
             elif number == 2:
-                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz + 2, chat_id))
+                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 2, chat_id))
             else:
-                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz + 3, chat_id))
+                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 3, chat_id))
         else:
             bot.send_message(chat_id, "Ты молодец!!!!")
             bot.send_message(chat_id, "Двигайся в том же направление!!!")
             if number == 3:
-                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz + 2, chat_id))
+                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 2, chat_id))
                 datab.commit()
                 datab.close()
             elif number == 2:
-                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz + 3, chat_id))
+                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 3, chat_id))
             else:
-                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz + 4, chat_id))
+                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 4, chat_id))
         datab.commit()
         datab.close()
         user_tests.pop(chat_id, None)

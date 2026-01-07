@@ -10,5 +10,6 @@
   "html": "learned_words.html",
   "file2": "output_bot.txt",
   "D_API": "f4fdb52c81fe8fa367a909b01cd12bfd",
-  "DICT": "https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
+  "DICT": "https://api.dictionaryapi.dev/api/v2/entries/en/{word}",
+  "html_ladder": "ladder.html"
 }

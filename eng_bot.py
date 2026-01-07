@@ -8,6 +8,7 @@ import json, requests, schedule
 from datetime import datetime, date
 from deep_translator import GoogleTranslator
 import detectlanguage
+from telebot.apihelper import get_chat
 
 # Тут создается база данных и подключается уже созданный тг бот
 with open("api.json", "r") as js:
@@ -158,6 +159,60 @@ def html_saves(res):
     print(f"{Fore.GREEN}***HTML файл успешно создан***{Style.RESET_ALL}")
 
 
+def html_ladder():
+    html_content = """
+            <!DOCTYPE html>
+            <html lang="ru">
+            <head>
+                <meta charset="UTF-8">
+                <title>Ваши выученные слова</title>
+                <style>
+                    table {
+                        border-collapse: collapse;
+                        width: 80%;
+                        margin: 20px auto;
+                    }
+                    th, td{
+                        border: 1px solid #333;
+                        padding: 8px 12px;
+                        text-align: left;
+                    }
+                    th {
+                        background-color: #f2f2f2;
+                    }
+                </style>
+            </head>
+            <body>
+                <table>
+                    <tr>
+                        <th>Пользователь</th>
+                        <th>Баллы</th>
+                    </tr>
+            """
+    datab = sq.connect(data["DB"])
+    curs = datab.cursor()
+    for i in get_ids():
+        quiz = curs.execute("""SELECT quiz FROM users WHERE id=?""", (int(i),)).fetchone()
+        quiz_v = quiz[0] if quiz != "" else 0
+        chat = bot.get_chat(i)
+        name = chat.first_name
+        html_content += f"""
+                    <tr>
+                        <td>{name}</td>
+                        <td>{quiz_v}</td>
+                    </tr>
+                """
+
+    html_content += """
+            </table>
+        </body>
+        </html>
+        """
+    with open(data["html_ladder"], "w", encoding="utf-8") as file:
+        file.write(html_content)
+    print(f"{Fore.GREEN}***HTML файл успешно создан***{Style.RESET_ALL}")
+
+
 # Функция для создания пользователя по тг айди и проверки на повторение
 def add_user(id, user_name):
     datab = sq.connect("users.db")
@@ -165,7 +220,7 @@ def add_user(id, user_name):
     res = curs.execute("""SELECT password_key FROM users WHERE id=?""", (int(id),)).fetchone()
     if res is None:
         password_k = str(id) + str(random.randint(1000, 1000000))
-        curs.execute("""INSERT INTO users VALUES(?, ?, ?, ?)""", (id, password_k, "", ""))
+        curs.execute("""INSERT INTO users VALUES(?, ?, ?, ?)""", (id, password_k, "", 0))
         datab.commit()
         datab.close()
         print(f"{Fore.RED}{id} - {Fore.GREEN}{user_name}{Style.RESET_ALL} - зарегался")
@@ -557,6 +612,13 @@ def end_bct(message):
         bot.reply_to(message, "У вас нет прав на совершение данной команды!!!")
 
 
+@bot.message_handler(commands=['ladder'])
+def ladder(message):
+    html_ladder()
+    bot.reply_to(message, "Вот файл-рейтинг:")
+    with open(data["html_ladder"], "r", encoding="utf-8") as f:
+        bot.send_document(message.chat.id, f)
+    os.remove(data["html_ladder"])
 
 
 def worded(line):

@@ -670,8 +670,6 @@ def send_next_question(chat_id):
             bot.send_message(chat_id, "Двигайся в том же направление!!!")
             if number == 3:
                 curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 2, chat_id))
-                datab.commit()
-                datab.close()
             elif number == 2:
                 curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 3, chat_id))
             else:

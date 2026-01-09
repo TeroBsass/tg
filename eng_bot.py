@@ -867,12 +867,12 @@ def easy_test(message):
 
 
 @bot.message_handler(text=["Средний тест"])
-def easy_test(message):
+def middle_test(message):
     test(message, 2)
 
 
 @bot.message_handler(text=["Сложный тест"])
-def easy_test(message):
+def hard_test(message):
     test(message, 1)
 
 

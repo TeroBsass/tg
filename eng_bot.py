@@ -588,7 +588,7 @@ def send_results():
     for i in get_ids():
         try:
             quiz = curs.execute("""SELECT quiz FROM users WHERE id=?""", (i, )).fetchone()
-            if quiz != "":
+            if quiz[0] != "" or quiz[0] != "0":
                 bot.send_message(i, f"В этом месяце ты заработал {quiz[0]} баллов по нашей системе оценивания.")
             else:
                 bot.send_message(i, "Ты не решал тесты в этом месяце, уже пора начинать!!!")
@@ -605,8 +605,12 @@ def bc_time(message):
         if user_day < 1 or user_day > 31:
             bot.reply_to(message, "Неверный день. Пожалуйста, введите день от 1 до 31.")
         else:
-            bot.reply_to(message, f"Напоминание будет срабатывать каждый {user_day}-й день месяца в {clock}.")
-            schedule_reminder(clock, user_day)
+            try:
+                bot.reply_to(message, f"Напоминание будет срабатывать каждый {user_day}-й день месяца в {clock}.")
+                schedule_reminder(clock, user_day)
+            except Exception as ex:
+                print(ex)
+                bot.reply_to(message, "Команда набрана неправильно!!!")
     else:
         bot.reply_to(message, "У вас нет прав на совершение данной команды!!!")
 
@@ -615,8 +619,12 @@ def bc_time(message):
 def end_bct(message):
     admin_ids = [i for i in data["ADMIN"]]
     if message.from_user.id in admin_ids:
-        scheduler.remove_job("monthly_results")
-        bot.reply_to(message, "Все планированные рассылки отменены!!!")
+        try:
+            scheduler.remove_job("monthly_results")
+            bot.reply_to(message, "Все планированные рассылки отменены!!!")
+        except Exception as ex:
+            print(ex)
+            bot.reply_to(message, "Нет назначенных рассылок!!!")
     else:
         bot.reply_to(message, "У вас нет прав на совершение данной команды!!!")
 

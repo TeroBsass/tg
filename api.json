@@ -7,6 +7,7 @@
     6112329359
   ],
   "DB": "users.db",
+  "DB2": "pods.db",
   "html": "learned_words.html",
   "file2": "output_bot.txt",
   "D_API": "f4fdb52c81fe8fa367a909b01cd12bfd",

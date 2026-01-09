@@ -588,7 +588,7 @@ def send_results():
     for i in get_ids():
         try:
             quiz = curs.execute("""SELECT quiz FROM users WHERE id=?""", (i, )).fetchone()
-            if quiz[0] != "" or quiz[0] != "0":
+            if quiz is not None and quiz[0] not in ("", "0", 0):
                 bot.send_message(i, f"В этом месяце ты заработал {quiz[0]} баллов по нашей системе оценивания.")
             else:
                 bot.send_message(i, "Ты не решал тесты в этом месяце, уже пора начинать!!!")

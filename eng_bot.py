@@ -5,10 +5,9 @@ import telebot as tg
 from telebot import types, custom_filters
 import sqlite3 as sq
 import json, requests, schedule
-from datetime import datetime, date
+from datetime import datetime
 from deep_translator import GoogleTranslator
 import detectlanguage
-from telebot.apihelper import get_chat
 
 # Тут создается база данных и подключается уже созданный тг бот
 with open("api.json", "r") as js:
@@ -191,10 +190,10 @@ def html_ladder():
             """
     datab = sq.connect(data["DB"])
     curs = datab.cursor()
-    for i in get_ids():
-        quiz = curs.execute("""SELECT quiz FROM users WHERE id=?""", (int(i),)).fetchone()
+    res = curs.execute("""SELECT id, quiz FROM users ORDER BY quiz DESC""").fetchall()
+    for id, quiz in res:
         quiz_v = quiz[0] if quiz != "" else 0
-        chat = bot.get_chat(i)
+        chat = bot.get_chat(id)
         name = chat.first_name
         html_content += f"""
                     <tr>

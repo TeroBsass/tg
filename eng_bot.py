@@ -4,10 +4,38 @@ from colorama import Fore, Style
 import telebot as tg
 from telebot import types, custom_filters
 import sqlite3 as sq
-import json, requests, schedule
-from datetime import datetime
+import json, requests
 from deep_translator import GoogleTranslator
 import detectlanguage
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+
+
+job_stores = {
+    "default": SQLAlchemyJobStore(url="sqlite:///jobs.sqlite")  # файл jobs.sqlite в текущей папке
+}
+
+scheduler = BackgroundScheduler(jobstores=job_stores)
+scheduler.start()
+
+
+def schedule_reminder(clock: str, day: int):
+    """
+    clock: строка вида '12:00'
+    day: число месяца 1..31
+    """
+    hour, minute = map(int, clock.split(":"))
+
+    scheduler.add_job(
+        send_results,
+        trigger="cron",
+        day=day,
+        hour=hour,
+        minute=minute,
+        id="monthly_results",        # фиксированный id, чтобы переопределять задачу
+        replace_existing=True,       # если задача уже есть — заменить
+    )
+
 
 # Тут создается база данных и подключается уже созданный тг бот
 with open("api.json", "r") as js:
@@ -19,7 +47,7 @@ cur = db.cursor()
 cur.execute("""CREATE TABLE IF NOT EXISTS users(id INT, password_key INT, words TEXT, quiz TEXT)""")
 db.commit()
 db.close()
-db2 = sq.connect("pods.db")
+db2 = sq.connect(data["DB2"])
 cur2 = db2.cursor()
 cur2.execute("""CREATE TABLE IF NOT EXISTS pods(id INTEGER PRIMARY KEY, email TEXT, message TEXT)""")
 db2.commit()
@@ -30,7 +58,6 @@ menu_state = ""
 main_state = "MAIN"
 test_state = "TEST"
 user_tests = {}
-tr_schedule = {}
 
 
 def get_word_data(word: str):
@@ -569,16 +596,6 @@ def send_results():
             print(ex)
 
 
-def job(day):
-    today = datetime.now().day
-    if today == day:
-        send_results()
-
-
-def schedule_reminder(clock, user_day):
-    schedule.every().day.at(clock).do(job, day=user_day)
-
-
 @bot.message_handler(commands=['start_bct'])
 def bc_time(message):
     admin_ids = [i for i in data["ADMIN"]]
@@ -590,12 +607,6 @@ def bc_time(message):
         else:
             bot.reply_to(message, f"Напоминание будет срабатывать каждый {user_day}-й день месяца в {clock}.")
             schedule_reminder(clock, user_day)
-            tr_schedule[0] = {
-                "bool": True
-            }
-            while tr_schedule[0]["bool"]:
-                schedule.run_pending()
-                time.sleep(1)
     else:
         bot.reply_to(message, "У вас нет прав на совершение данной команды!!!")
 
@@ -604,8 +615,7 @@ def bc_time(message):
 def end_bct(message):
     admin_ids = [i for i in data["ADMIN"]]
     if message.from_user.id in admin_ids:
-        schedule.clear()
-        tr_schedule[0]["bool"] = False
+        scheduler.remove_job("monthly_results")
         bot.reply_to(message, "Все планированные рассылки отменены!!!")
     else:
         bot.reply_to(message, "У вас нет прав на совершение данной команды!!!")
@@ -949,7 +959,7 @@ def add_admin(message):
 @bot.message_handler(commands=["del"])
 def delete(message):
     id = message.text[len('/del '):]
-    datab = sq.connect("pods.db")
+    datab = sq.connect(data["DB2"])
     curs = datab.cursor()
     admin_ids = [i for i in data["ADMIN"]]
     id2 = message.from_user.id

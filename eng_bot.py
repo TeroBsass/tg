@@ -447,6 +447,7 @@ def back(message):
 def more_and_more(message: types.Message):
     text = message.text
     info = get_word_data(text)
+    print(f"{Fore.RED}{message.from_user.first_name}{Style.RESET_ALL} запросил подробности о слове {Fore.BLUE}{text}{Style.RESET_ALL}...")
     if not info:
         bot.reply_to(message, "О таком слове у нас нет информации!!!")
         return
@@ -503,6 +504,7 @@ def more_and_more(message: types.Message):
         bot.send_audio(message.chat.id, audio_file)
     else:
         bot.send_message(message.chat.id, "Аудио - отсутствует")
+    print(f"{Fore.RED}{message.from_user.first_name}{Style.RESET_ALL} - получил подробности!!!")
 
 
 @bot.message_handler(text=["Узнать о слове подробнее"])
@@ -585,6 +587,7 @@ def handle_broadcast(message):
 def send_results():
     datab = sq.connect(data["DB"])
     curs = datab.cursor()
+    print(f"{Fore.GREEN}***Рассылка начинается***{Style.RESET_ALL}")
     for i in get_ids():
         try:
             quiz = curs.execute("""SELECT quiz FROM users WHERE id=?""", (i, )).fetchone()
@@ -592,8 +595,10 @@ def send_results():
                 bot.send_message(i, f"В этом месяце ты заработал {quiz[0]} баллов по нашей системе оценивания.")
             else:
                 bot.send_message(i, "Ты не решал тесты в этом месяце, уже пора начинать!!!")
+            print(f"{Fore.RED}{i}{Style.RESET_ALL} - получил рассылку.")
         except Exception as ex:
             print(ex)
+    print(f"{Fore.GREEN}***Рассылка завершена***{Style.RESET_ALL}")
 
 
 @bot.message_handler(commands=['start_bct'])
@@ -881,16 +886,19 @@ def cases_test(r, r2, info, word_index, word):
 
 @bot.message_handler(text=["Легкий тест"])
 def easy_test(message):
+    print(f"{Fore.RED}{message.from_user.first_name}{Style.RESET_ALL} - хочет пройти легкий тест...")
     test(message, 3)
 
 
 @bot.message_handler(text=["Средний тест"])
 def middle_test(message):
+    print(f"{Fore.RED}{message.from_user.first_name}{Style.RESET_ALL} - хочет пройти средний тест...")
     test(message, 2)
 
 
 @bot.message_handler(text=["Сложный тест"])
 def hard_test(message):
+    print(f"{Fore.RED}{message.from_user.first_name}{Style.RESET_ALL} - хочет пройти сложный тест...")
     test(message, 1)
 
 

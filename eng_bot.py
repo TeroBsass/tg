@@ -219,7 +219,7 @@ def html_ladder():
     curs = datab.cursor()
     res = curs.execute("""SELECT id, quiz FROM users ORDER BY quiz DESC""").fetchall()
     for id, quiz in res:
-        quiz_v = quiz[0] if quiz != "" else 0
+        quiz_v = int(quiz) if quiz else 0
         chat = bot.get_chat(id)
         name = chat.first_name
         html_content += f"""

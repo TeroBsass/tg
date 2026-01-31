@@ -1010,12 +1010,13 @@ def add_ad(message: types.Message):
     bot.reply_to(message, "Админ добавлен.")
     print(f"{Fore.RED}{message.from_user.first_name} {Style.RESET_ALL}добавил админа {Fore.RED}{id}{Style.RESET_ALL}")
 
-
 # Запускаем бота с обработкой ошибок
 if __name__ == "__main__":
     try:
         print(f"{Fore.CYAN}***Бот запущен***{Style.RESET_ALL}")
         bot.infinity_polling()
+
+
     except Exception as e:
         print(f"{Fore.RED}Произошла ошибка: {Style.RESET_ALL}{e}")
         # Можно добавить задержку или повторный запуск

@@ -9,6 +9,7 @@ from deep_translator import GoogleTranslator
 import detectlanguage
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from contextlib import closing
 
 
 job_stores = {
@@ -38,20 +39,36 @@ def schedule_reminder(clock: str, day: int):
 
 
 # Тут создается база данных и подключается уже созданный тг бот
-with open("api.json", "r") as js:
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+API_JSON = os.path.join(BASE_DIR, 'api.json')
+with open(API_JSON, "r") as js:
     data = json.load(js)
+DB_USERS_DIR = os.path.join(BASE_DIR, 'site', f"{data['DB']}")
+DB_PODS_DIR = os.path.join(BASE_DIR, 'site', f"{data['DB2']}")
 bot = tg.TeleBot(data["API"])
 bot.add_custom_filter(custom_filters.TextMatchFilter())
-db = sq.connect(data["DB"])
-cur = db.cursor()
-cur.execute("""CREATE TABLE IF NOT EXISTS users(id INT, password_key INT, words TEXT, quiz TEXT)""")
-db.commit()
-db.close()
-db2 = sq.connect(data["DB2"])
-cur2 = db2.cursor()
-cur2.execute("""CREATE TABLE IF NOT EXISTS pods(id INTEGER PRIMARY KEY, email TEXT, message TEXT)""")
-db2.commit()
-db2.close()
+
+
+def init_db():
+    with closing(sq.connect(DB_USERS_DIR)) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS users(id INT, password_key INT, words TEXT, quiz TEXT, name TEXT, username TEXT)""")
+        db.commit()
+    with closing(sq.connect(DB_PODS_DIR)) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS pods(id INTEGER PRIMARY KEY, email TEXT, message TEXT)""")
+        db.commit()
+
+
+def get_users_db():
+    db = sq.connect(DB_USERS_DIR)
+    db.row_factory = sq.Row
+    return db
+
+def get_pods_db():
+    db = sq.connect(DB_PODS_DIR)
+    db.row_factory = sq.Row
+    return db
+
+
 detectlanguage.configuration.api_key = data["D_API"]
 API_URL = data["DICT"]
 menu_state = ""
@@ -185,87 +202,36 @@ def html_saves(res):
     print(f"{Fore.GREEN}***HTML файл успешно создан***{Style.RESET_ALL}")
 
 
-def html_ladder():
-    html_content = """
-            <!DOCTYPE html>
-            <html lang="ru">
-            <head>
-                <meta charset="UTF-8">
-                <title>Ваши выученные слова</title>
-                <style>
-                    table {
-                        border-collapse: collapse;
-                        width: 80%;
-                        margin: 20px auto;
-                    }
-                    th, td{
-                        border: 1px solid #333;
-                        padding: 8px 12px;
-                        text-align: left;
-                    }
-                    th {
-                        background-color: #f2f2f2;
-                    }
-                </style>
-            </head>
-            <body>
-                <table>
-                    <tr>
-                        <th>Пользователь</th>
-                        <th>Баллы</th>
-                    </tr>
-            """
-    datab = sq.connect(data["DB"])
-    curs = datab.cursor()
-    res = curs.execute("""SELECT id, quiz FROM users ORDER BY quiz DESC""").fetchall()
-    for id, quiz in res:
-        quiz_v = quiz[0] if quiz != "" else 0
-        chat = bot.get_chat(id)
-        name = chat.first_name
-        html_content += f"""
-                    <tr>
-                        <td>{name}</td>
-                        <td>{quiz_v}</td>
-                    </tr>
-                """
-
-    html_content += """
-            </table>
-        </body>
-        </html>
-        """
-    with open(data["html_ladder"], "w", encoding="utf-8") as file:
-        file.write(html_content)
-    print(f"{Fore.GREEN}***HTML файл успешно создан***{Style.RESET_ALL}")
-
-
 # Функция для создания пользователя по тг айди и проверки на повторение
-def add_user(id, user_name):
-    datab = sq.connect("users.db")
-    curs = datab.cursor()
-    res = curs.execute("""SELECT password_key FROM users WHERE id=?""", (int(id),)).fetchone()
-    if res is None:
-        password_k = str(id) + str(random.randint(1000, 1000000))
-        curs.execute("""INSERT INTO users VALUES(?, ?, ?, ?)""", (id, password_k, "", 0))
-        datab.commit()
-        datab.close()
-        print(f"{Fore.RED}{id} - {Fore.GREEN}{user_name}{Style.RESET_ALL} - зарегался")
-    else:
-        print(f"{Fore.RED}{id} - {Fore.GREEN}{user_name}{Style.RESET_ALL} зашел еще раз.")
+def add_user(id, user_name, tag):
+    from colorama import Fore, Style
+    with closing(get_users_db()) as db:
+        res = db.execute("""SELECT password_key FROM users WHERE id=?""", (int(id),)).fetchone()
+        if res is None:
+            password_k = str(id) + str(random.randint(1000, 1000000))
+            db.execute("""INSERT INTO users VALUES(?, ?, ?, ?, ?, ?)""", (id, password_k, "", 0, user_name, tag))
+            print(f"{Fore.RED}{id} - {Fore.GREEN}{user_name}{Style.RESET_ALL} - зарегался")
+        else:
+            print(f"{Fore.RED}{id} - {Fore.GREEN}{user_name}{Style.RESET_ALL} зашел еще раз.")
+            rev = db.execute("""SELECT name, username FROM users WHERE id=?""", (id, )).fetchone()
+            old_name, old_tag = rev
+            if not rev or old_name != user_name or old_tag != tag:
+                db.execute("""UPDATE users SET name=?, username=? WHERE id=?""", (user_name, tag, id))
+                print(f"Данные обновлены для {Fore.RED}{id}{Style.RESET_ALL}:")
+                print(f"Новое имя: {Fore.GREEN}{user_name}{Style.RESET_ALL}, Тег: {Fore.BLUE}@{tag}{Style.RESET_ALL}")
+        db.commit()
 
 
 # Находит все изученные слова
 def get_saves(id):
     strings = []
-    datab = sq.connect(data["DB"])
-    curs = datab.cursor()
-    res = curs.execute("""SELECT words FROM users WHERE id=?""", (int(id),)).fetchone()
+    with closing(get_users_db()) as db:
+        res = db.execute("""SELECT words FROM users WHERE id=?""", (int(id),)).fetchone()
     words = result(res)
     with open(data["file"], "r", encoding='utf-8') as f:
         lines = f.readlines()
     for i in words:
         strings.append(lines[int(i)])
-    datab.close()
     return strings
 
 
@@ -280,11 +246,9 @@ def result(res):
 
 # Функция для взятия всех пользователей и в дальнейшем рассылки
 def get_ids():
-    datab = sq.connect("users.db")
-    curs = datab.cursor()
-    curs.execute("""SELECT id FROM users""")
-    res = [row[0] for row in curs.fetchall()]
-    datab.close()
+    with closing(get_users_db()) as db:
+        reses = db.execute("""SELECT id FROM users""").fetchall()
+        res = [row[0] for row in reses]
     return res
 
 
@@ -308,65 +272,61 @@ def g_w(message: types.Message, n):
         id = message.from_user.id
         user = message.from_user.first_name
         is_tr = False
-        datab = sq.connect(data["DB"])
-        curs = datab.cursor()
         print(f"{Fore.RED}{user}:{Style.RESET_ALL}")
-        try:
-            # проверка на повторение слов и вывод слова, которое еще не было изучено.
-            rand = random.randint(1, 9824)
-            res = curs.execute("""SELECT words FROM users WHERE id=?""", (int(id),)).fetchone()
-            numbers = result(res)
-            print(f"{Fore.YELLOW}Check {Style.RESET_ALL}{rand}")
-            while not is_tr:
-                for i in numbers:
-                    if i != rand:
-                        pass
-                    else:
-                        rand = random.randint(1, 9824)
-                is_tr = True
-            bot.reply_to(message=message, text="This is your random word to learn(Это твоё рандомное слово для "
-                                               "изучения):")
-            with open(data["file"], 'r', encoding='utf-8') as file:
-                lines = file.readlines()
-            bot.send_message(message.chat.id, text=lines[rand])
-            words = f"{' '.join(str(w) for w in res)}{rand};"
-            curs.execute("""UPDATE users SET words=? WHERE id=?""", (
-                words, id))
-            datab.commit()
-            datab.close()
-            print(f"{Fore.GREEN}Checked {Style.RESET_ALL}{rand}")
-        except Exception as ex:
-            print(f"{Fore.YELLOW}{ex}{Style.RESET_ALL}")
+        with closing(get_users_db()) as db:
+            try:
+                # проверка на повторение слов и вывод слова, которое еще не было изучено.
+                rand = random.randint(1, 9824)
+                res = db.execute("""SELECT words FROM users WHERE id=?""", (int(id),)).fetchone()
+                numbers = result(res)
+                print(f"{Fore.YELLOW}Check {Style.RESET_ALL}{rand}")
+                while not is_tr:
+                    for i in numbers:
+                        if i != rand:
+                            pass
+                        else:
+                            rand = random.randint(1, 9824)
+                    is_tr = True
+                bot.reply_to(message=message, text="This is your random word to learn(Это твоё рандомное слово для "
+                                                   "изучения):")
+                with open(data["file"], 'r', encoding='utf-8') as file:
+                    lines = file.readlines()
+                bot.send_message(message.chat.id, text=lines[rand])
+                words = f"{' '.join(str(w) for w in res)}{rand};"
+                db.execute("""UPDATE users SET words=? WHERE id=?""", (
+                    words, id))
+                db.commit()
+                print(f"{Fore.GREEN}Checked {Style.RESET_ALL}{rand}")
+            except Exception as ex:
+                print(f"{Fore.YELLOW}{ex}{Style.RESET_ALL}")
     elif n == 2:
         id = message.from_user.id
         # user = message.from_user.first_name
         is_tr = False
-        datab = sq.connect(data["DB"])
-        curs = datab.cursor()
-        try:
-            # проверка на повторение слов и вывод слова, которое еще не было изучено.
-            rand = random.randint(1, 9824)
-            res = curs.execute("""SELECT words FROM users WHERE id=?""", (int(id),)).fetchone()
-            numbers = result(res)
-            print(f"{Fore.YELLOW}Check {Style.RESET_ALL}{rand}")
-            while not is_tr:
-                for i in numbers:
-                    if i != rand:
-                        pass
-                    else:
-                        rand = random.randint(1, 9824)
-                is_tr = True
-            with open(data["file"], 'r', encoding='utf-8') as file:
-                lines = file.readlines()
-            bot.send_message(message.chat.id, text=lines[rand])
-            words = f"{' '.join(str(w) for w in res)}{rand};"
-            curs.execute("""UPDATE users SET words=? WHERE id=?""", (
-                words, id))
-            datab.commit()
-            datab.close()
-            print(f"{Fore.GREEN}Checked {Style.RESET_ALL}{rand}")
-        except Exception as ex:
-            print(f"{Fore.YELLOW}{ex}{Style.RESET_ALL}")
+        with closing(get_users_db()) as db:
+            try:
+                # проверка на повторение слов и вывод слова, которое еще не было изучено.
+                rand = random.randint(1, 9824)
+                res = db.execute("""SELECT words FROM users WHERE id=?""", (int(id),)).fetchone()
+                numbers = result(res)
+                print(f"{Fore.YELLOW}Check {Style.RESET_ALL}{rand}")
+                while not is_tr:
+                    for i in numbers:
+                        if i != rand:
+                            pass
+                        else:
+                            rand = random.randint(1, 9824)
+                    is_tr = True
+                with open(data["file"], 'r', encoding='utf-8') as file:
+                    lines = file.readlines()
+                bot.send_message(message.chat.id, text=lines[rand])
+                words = f"{' '.join(str(w) for w in res)}{rand};"
+                db.execute("""UPDATE users SET words=? WHERE id=?""", (
+                    words, id))
+                db.commit()
+                print(f"{Fore.GREEN}Checked {Style.RESET_ALL}{rand}")
+            except Exception as ex:
+                print(f"{Fore.YELLOW}{ex}{Style.RESET_ALL}")
 
 
 def translate_register(message: types.Message):
@@ -447,6 +407,7 @@ def back(message):
 def more_and_more(message: types.Message):
     text = message.text
     info = get_word_data(text)
+    print(f"{Fore.RED}{message.from_user.first_name}{Style.RESET_ALL} запросил подробности о слове {Fore.BLUE}{text}{Style.RESET_ALL}...")
     if not info:
         bot.reply_to(message, "О таком слове у нас нет информации!!!")
         return
@@ -503,6 +464,7 @@ def more_and_more(message: types.Message):
         bot.send_audio(message.chat.id, audio_file)
     else:
         bot.send_message(message.chat.id, "Аудио - отсутствует")
+    print(f"{Fore.RED}{message.from_user.first_name}{Style.RESET_ALL} - получил подробности!!!")
 
 
 @bot.message_handler(text=["Узнать о слове подробнее"])
@@ -523,11 +485,12 @@ def site(message):
 def start(message):
     id = message.from_user.id
     name = message.from_user.first_name
+    tag = message.from_user.username
     bot.reply_to(message=message, text="Привет, это крутой бот для изучения английского!")
     bot.send_message(message.chat.id, text="На английском это звучало бы так -> Hi, this is cool bot to learn english!")
     bot.send_message(message.chat.id, "Вам может помочь команда /h или /help, если вы ничего не понимаете!",
                      reply_markup=switch_menu())
-    add_user(id, name)
+    add_user(id, name, tag)
 
 
 # Помощь
@@ -535,6 +498,7 @@ def start(message):
 def helping(message):
     user = message.from_user.first_name
     id = message.from_user.id
+    tag = message.from_user.username
     print(f"{Fore.RED}{user} {Style.RESET_ALL}need help!!")
     bot.reply_to(message,
                  "Чтобы пользоваться ботом просто нажмите на кнопки снизу или собственноручно вводите команды"
@@ -545,7 +509,7 @@ def helping(message):
     bot.send_message(message.chat.id,
                      "Функционал пока маленький, но обновления не за горами!(Bot have not a lot of functions, "
                      "but updates will be soon!)", reply_markup=switch_menu())
-    add_user(id, user)
+    add_user(id, user, tag)
 
 
 # Рассылка (команда bc)
@@ -583,17 +547,19 @@ def handle_broadcast(message):
 
 
 def send_results():
-    datab = sq.connect(data["DB"])
-    curs = datab.cursor()
-    for i in get_ids():
-        try:
-            quiz = curs.execute("""SELECT quiz FROM users WHERE id=?""", (i, )).fetchone()
-            if quiz != "":
-                bot.send_message(i, f"В этом месяце ты заработал {quiz[0]} баллов по нашей системе оценивания.")
-            else:
-                bot.send_message(i, "Ты не решал тесты в этом месяце, уже пора начинать!!!")
-        except Exception as ex:
-            print(ex)
+    print(f"{Fore.GREEN}***Рассылка начинается***{Style.RESET_ALL}")
+    with closing(get_users_db()) as db:
+        for i in get_ids():
+            try:
+                quiz = db.execute("""SELECT quiz FROM users WHERE id=?""", (i, )).fetchone()
+                if quiz is not None and quiz[0] not in ("", "0", 0):
+                    bot.send_message(i, f"В этом месяце ты заработал {quiz[0]} баллов по нашей системе оценивания.")
+                else:
+                    bot.send_message(i, "Ты не решал тесты в этом месяце, уже пора начинать!!!")
+                print(f"{Fore.RED}{i}{Style.RESET_ALL} - получил рассылку.")
+            except Exception as ex:
+                print(ex)
+    print(f"{Fore.GREEN}***Рассылка завершена***{Style.RESET_ALL}")
 
 
 @bot.message_handler(commands=['start_bct'])
@@ -605,8 +571,12 @@ def bc_time(message):
         if user_day < 1 or user_day > 31:
             bot.reply_to(message, "Неверный день. Пожалуйста, введите день от 1 до 31.")
         else:
-            bot.reply_to(message, f"Напоминание будет срабатывать каждый {user_day}-й день месяца в {clock}.")
-            schedule_reminder(clock, user_day)
+            try:
+                bot.reply_to(message, f"Напоминание будет срабатывать каждый {user_day}-й день месяца в {clock}.")
+                schedule_reminder(clock, user_day)
+            except Exception as ex:
+                print(ex)
+                bot.reply_to(message, "Команда набрана неправильно!!!")
     else:
         bot.reply_to(message, "У вас нет прав на совершение данной команды!!!")
 
@@ -615,19 +585,20 @@ def bc_time(message):
 def end_bct(message):
     admin_ids = [i for i in data["ADMIN"]]
     if message.from_user.id in admin_ids:
-        scheduler.remove_job("monthly_results")
-        bot.reply_to(message, "Все планированные рассылки отменены!!!")
+        try:
+            scheduler.remove_job("monthly_results")
+            bot.reply_to(message, "Все планированные рассылки отменены!!!")
+        except Exception as ex:
+            print(ex)
+            bot.reply_to(message, "Нет назначенных рассылок!!!")
     else:
         bot.reply_to(message, "У вас нет прав на совершение данной команды!!!")
 
 
 @bot.message_handler(commands=['ladder'])
 def ladder(message):
-    html_ladder()
-    bot.reply_to(message, "Вот файл-рейтинг:")
-    with open(data["html_ladder"], "r", encoding="utf-8") as f:
-        bot.send_document(message.chat.id, f)
-    os.remove(data["html_ladder"])
+    bot.reply_to(message, "Вот рейтинг:")
+    bot.send_message(message.chat.id, "https://t3roll.pythonanywhere.com/ladder")
 
 
 def worded(line):
@@ -636,6 +607,22 @@ def worded(line):
     else:
         word = line.split(" ")[0]
     return word
+
+
+def transced(line):
+    if "[" in line:
+        transc = line[line.index('['):line.index(']')]
+    else:
+        transc = "Отсутствует."
+    return transc
+
+
+def transled(line):
+    if "[" in line:
+        transl = line[line.index(']'):-1]
+    else:
+        transl = line.split(' ')[-1]
+    return transl
 
 
 def send_next_question(chat_id):
@@ -649,45 +636,41 @@ def send_next_question(chat_id):
     amount = state["amount"]
     correct = state["count"]
     number = state["number"]
-    datab = sq.connect(data["DB"])
-    curs = datab.cursor()
-    quiz = curs.execute("""SELECT quiz FROM users WHERE id=?""", (chat_id,)).fetchone()
-    quiz_v = int(quiz[0]) if quiz else 0
-
-
-    if pos >= len(word_indexes):
-        if number != 1:
-            bot.send_message(chat_id, f"Ты смог ответить верно {correct} из {amount}"
-                                      f"(1/{number} из всех изученных тобой слов)")
-        else:
-            bot.send_message(chat_id, f"Ты смог ответить верно {correct} из {amount}"
-                                      f"(все твои слова)")
-        if correct <= amount // 3:
-            bot.send_message(chat_id, "Твой результат не такой красочный, какой мог быть.")
-            bot.send_message(chat_id, "Тебе следует изучить заново слова!!!")
-        elif amount // 3 < correct <= amount // 2:
-            bot.send_message(chat_id, "Твой результат неплох.")
-            bot.send_message(chat_id, "Но у тебя были ошибки, для закрепления повтори слова еще раз.")
-            if number == 3:
-                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 1, chat_id))
-            elif number == 2:
-                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 2, chat_id))
+    with closing(get_users_db()) as db:
+        quiz = db.execute("""SELECT quiz FROM users WHERE id=?""", (chat_id,)).fetchone()
+        quiz_v = int(quiz[0]) if quiz else 0
+        if pos >= len(word_indexes):
+            if number != 1:
+                bot.send_message(chat_id, f"Ты смог ответить верно {correct} из {amount}"
+                                          f"(1/{number} из всех изученных тобой слов)")
             else:
-                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 3, chat_id))
-        else:
-            bot.send_message(chat_id, "Ты молодец!!!!")
-            bot.send_message(chat_id, "Двигайся в том же направление!!!")
-            if number == 3:
-                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 2, chat_id))
-            elif number == 2:
-                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 3, chat_id))
+                bot.send_message(chat_id, f"Ты смог ответить верно {correct} из {amount}"
+                                          f"(все твои слова)")
+            if correct <= amount // 3:
+                bot.send_message(chat_id, "Твой результат не такой красочный, какой мог быть.")
+                bot.send_message(chat_id, "Тебе следует изучить заново слова!!!")
+            elif amount // 3 < correct <= amount // 2:
+                bot.send_message(chat_id, "Твой результат неплох.")
+                bot.send_message(chat_id, "Но у тебя были ошибки, для закрепления повтори слова еще раз.")
+                if number == 3:
+                    db.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 1, chat_id))
+                elif number == 2:
+                    db.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 2, chat_id))
+                else:
+                    db.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 3, chat_id))
             else:
-                curs.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 4, chat_id))
-        datab.commit()
-        datab.close()
-        user_tests.pop(chat_id, None)
-        print(f"{Fore.RED}{chat_id}{Style.RESET_ALL} завершил тест...")
-        return
+                bot.send_message(chat_id, "Ты молодец!!!!")
+                bot.send_message(chat_id, "Двигайся в том же направление!!!")
+                if number == 3:
+                    db.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 2, chat_id))
+                elif number == 2:
+                    db.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 3, chat_id))
+                else:
+                    db.execute("""UPDATE users SET quiz=? WHERE id=?""", (quiz_v + 4, chat_id))
+            db.commit()
+            user_tests.pop(chat_id, None)
+            print(f"{Fore.RED}{chat_id}{Style.RESET_ALL} завершил тест...")
+            return
     word_index = word_indexes[pos]
     line = lines[word_index].strip().lower()
     word = worded(line)
@@ -873,27 +856,28 @@ def cases_test(r, r2, info, word_index, word):
 
 @bot.message_handler(text=["Легкий тест"])
 def easy_test(message):
+    print(f"{Fore.RED}{message.from_user.first_name}{Style.RESET_ALL} - хочет пройти легкий тест...")
     test(message, 3)
 
 
 @bot.message_handler(text=["Средний тест"])
 def middle_test(message):
+    print(f"{Fore.RED}{message.from_user.first_name}{Style.RESET_ALL} - хочет пройти средний тест...")
     test(message, 2)
 
 
 @bot.message_handler(text=["Сложный тест"])
 def hard_test(message):
+    print(f"{Fore.RED}{message.from_user.first_name}{Style.RESET_ALL} - хочет пройти сложный тест...")
     test(message, 1)
 
 
 def test(message, number):
-    datab = sq.connect(data["DB"])
-    curs = datab.cursor()
-    res = curs.execute(
-        """SELECT words FROM users WHERE id=?""",
-        (int(message.from_user.id),)
-    ).fetchone()
-    datab.close()
+    with closing(get_users_db()) as db:
+        res = db.execute(
+            """SELECT words FROM users WHERE id=?""",
+            (int(message.from_user.id),)
+        ).fetchone()
     user = message.from_user.first_name
     chat_id = message.chat.id
 
@@ -959,47 +943,43 @@ def add_admin(message):
 @bot.message_handler(commands=["del"])
 def delete(message):
     id = message.text[len('/del '):]
-    datab = sq.connect(data["DB2"])
-    curs = datab.cursor()
     admin_ids = [i for i in data["ADMIN"]]
     id2 = message.from_user.id
-    res = curs.execute("""SELECT email FROM pods WHERE id=?""", (id,)).fetchone()
-    if id2 not in admin_ids:
-        bot.reply_to(message, "У вас нет прав на выполнение этой команды.")
-    else:
-        if res is not None:
-            try:
-                curs.execute("""DELETE FROM pods WHERE id=?""", (id,))
-                datab.commit()
-                datab.close()
-                print(f"{Fore.RED} {message.from_user.first_name} {Style.RESET_ALL} удалил сообщение из поддержки")
-                bot.reply_to(message, f"Письмо в поддержку от id {id} было удалено!!!")
-            except Exception as ex:
-                print(ex)
-                print(
-                    f"{Fore.RED} {message.from_user.first_name} {Style.RESET_ALL} пытался удалить сообщение из поддержки")
-                bot.reply_to(message, "Пользователь с таким айди не найден")
-                datab.close()
+    with closing(get_pods_db()) as db:
+        res = db.execute("""SELECT email FROM pods WHERE id=?""", (id,)).fetchone()
+        if id2 not in admin_ids:
+            bot.reply_to(message, "У вас нет прав на выполнение этой команды.")
         else:
-            print(f"{Fore.RED} {message.from_user.first_name} {Style.RESET_ALL} пытался удалить сообщение из поддержки")
-            bot.reply_to(message, "Пользователь с таким айди не найден")
-            datab.close()
+            if res is not None:
+                try:
+                    db.execute("""DELETE FROM pods WHERE id=?""", (id,))
+                    db.commit()
+                    print(f"{Fore.RED} {message.from_user.first_name} {Style.RESET_ALL} удалил сообщение из поддержки")
+                    bot.reply_to(message, f"Письмо в поддержку от id {id} было удалено!!!")
+                except Exception as ex:
+                    print(ex)
+                    print(
+                        f"{Fore.RED} {message.from_user.first_name} {Style.RESET_ALL} пытался удалить сообщение из поддержки")
+                    bot.reply_to(message, "Пользователь с таким айди не найден")
+            else:
+                print(f"{Fore.RED} {message.from_user.first_name} {Style.RESET_ALL} пытался удалить сообщение из поддержки")
+                bot.reply_to(message, "Пользователь с таким айди не найден")
 
 
 def add_ad(message: types.Message):
     id = int(message.text)
     data["ADMIN"].append(id)
-    with open("api.json", "w", encoding="utf-8") as jsf:
+    with open(API_JSON, "w", encoding="utf-8") as jsf:
         json.dump(data, jsf, ensure_ascii=False, indent=4)
     bot.reply_to(message, "Админ добавлен.")
     print(f"{Fore.RED}{message.from_user.first_name} {Style.RESET_ALL}добавил админа {Fore.RED}{id}{Style.RESET_ALL}")
-
 
 # Запускаем бота с обработкой ошибок
 if __name__ == "__main__":
     try:
         print(f"{Fore.CYAN}***Бот запущен***{Style.RESET_ALL}")
-        bot.infinity_polling()
+        init_db()
+        bot.polling(non_stop=True)
     except Exception as e:
         print(f"{Fore.RED}Произошла ошибка: {Style.RESET_ALL}{e}")
         # Можно добавить задержку или повторный запуск

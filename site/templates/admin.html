@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Админ панель - Поддержка</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <style>
+    table {
+      border-collapse: collapse;
+      width: 80%;
+      margin: 20px auto;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>Админ панель - Сообщения</h1>
+    <a href="/admin_out" style="float:right; margin:10px;">Выход</a>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <p style="color: {% if category=='error' %}red{% elif category=='success' %}green{% else %}blue{% endif %}; text-align:center;">
+          {{ message }}
+        </p>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% if messages %}
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>Email</th>
+        <th>Сообщение</th>
+        <th>Действия</th>
+      </tr>
+      {% for msg in messages %}
+        <tr>
+          <td>{{ msg.id }}</td>
+          <td>{{ msg.email }}</td>
+          <td>{{ msg.message }}</td>
+          <td>
+            <form method="POST" action="/delete_message" style="display:inline;">
+              <input type="hidden" name="message_id" value="{{ msg.id }}">
+              <button type="submit" onclick="return confirm('Удалить сообщение?')">Удалить</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p style="text-align:center; font-size:18px;">Нет сообщений</p>
+  {% endif %}
+
+  <footer class="footer">
+    <p>© 2025 TeroBass. Все права защищены.</p>
+  </footer>
+</body>
+</html>

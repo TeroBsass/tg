@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Рейтинг лидеров — Happy English Bot</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/icon.jpeg') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #161923;
+      --surface2: #1e2330;
+      --border: rgba(255,255,255,0.07);
+      --accent: #4f8ef7;
+      --accent2: #7c5df9;
+      --green: #3ecf8e;
+      --text: #e8ecf4;
+      --muted: #6b7694;
+      --radius: 14px;
+      --header-h: 70px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding-top: var(--header-h);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-h);
+      background: rgba(13,15,20,0.92);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+    }
+
+    .header-logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      text-decoration: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Desktop nav */
+    .header-nav {
+      display: flex;
+      list-style: none;
+      margin: 0 0 0 24px;
+      padding: 0;
+      gap: 6px;
+    }
+
+    .header-nav a {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border-radius: 10px;
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .header-nav a:hover { background: var(--surface2); color: var(--text); }
+    .header-nav a.active { background: rgba(79,142,247,0.12); color: var(--accent); }
+
+    /* Profile btn */
+    .header-actions { margin-left: auto; position: relative; flex-shrink: 0; }
+
+    .profile-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 12px 5px 5px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 40px;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      font-size: 0.875rem;
+    }
+    .profile-btn:hover { border-color: rgba(255,255,255,0.15); }
+
+    .profile-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.75rem;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* Hamburger */
+    .burger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 36px;
+      height: 36px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      padding: 8px;
+      flex-shrink: 0;
+    }
+    .burger span {
+      display: block;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: all 0.25s;
+    }
+    .burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .burger.open span:nth-child(2) { opacity: 0; }
+    .burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* Mobile nav drawer */
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      top: var(--header-h);
+      left: 0; right: 0;
+      background: rgba(13,15,20,0.97);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 12px 16px 16px;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .mobile-nav.open { display: flex; }
+
+    .mobile-nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .mobile-nav a:hover, .mobile-nav a.active {
+      background: var(--surface2);
+      color: var(--text);
+    }
+    .mobile-nav a.active { color: var(--accent); }
+
+    /* Profile dropdown */
+    .profile-dropdown {
+      position: absolute;
+      top: calc(100% + 12px);
+      right: 0;
+      width: 220px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      display: none;
+      flex-direction: column;
+      z-index: 1001;
+    }
+    .profile-dropdown.open { display: flex; }
+
+    .dropdown-header { padding: 8px 10px 10px; }
+    .dropdown-name { font-weight: 600; font-size: 0.9rem; }
+    .dropdown-username { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .dropdown-divider { height: 1px; background: var(--border); margin: 6px 0; }
+    .dropdown-item {
+      padding: 9px 10px;
+      border-radius: 8px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.875rem;
+      display: block;
+    }
+    .dropdown-item:hover { background: var(--surface2); }
+
+    /* ── MAIN CONTENT ── */
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 20px 60px;
+    }
+
+    .page-header { margin-bottom: 32px; }
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.8rem, 5vw, 2.5rem);
+      font-weight: 800;
+      margin: 0 0 6px;
+      line-height: 1.1;
+    }
+    .section-sub { color: var(--muted); margin: 0; font-size: 0.9rem; }
+
+    /* ── SEARCH ── */
+    .search-wrap {
+      margin-bottom: 24px;
+      position: relative;
+    }
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+      display: flex;
+    }
+    .search-input {
+      width: 100%;
+      padding: 12px 14px 12px 42px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input::placeholder { color: var(--muted); }
+    .search-input:focus { border-color: rgba(79,142,247,0.4); box-shadow: 0 0 0 3px rgba(79,142,247,0.08); }
+
+    .search-count {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      min-height: 18px;
+    }
+
+    /* ── TABLE ── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead { display: table-header-group; }
+    th {
+      padding: 14px 20px;
+      text-align: left;
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+      background: rgba(30,35,48,0.6);
+    }
+
+    tbody tr {
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: rgba(79,142,247,0.04); }
+    tbody tr:last-child td { border-bottom: none; }
+
+    td {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+      vertical-align: middle;
+    }
+
+    .rank {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+      min-width: 48px;
+    }
+    .rank-1 { color: #fbbf24; }
+    .rank-2 { color: #94a3b8; }
+    .rank-3 { color: #cd7c3a; }
+    .rank-other { color: var(--muted); }
+
+    .user-cell { display: flex; align-items: center; gap: 10px; }
+    .user-mini-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.7rem;
+      flex-shrink: 0;
+    }
+
+    .points {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--green);
+    }
+
+    .medal { font-size: 1.1rem; }
+
+    /* No results */
+    .no-results {
+      padding: 48px 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .no-results-icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+    /* ── RESPONSIVE: CARDS MODE ON SMALL SCREENS ── */
+    @media (max-width: 520px) {
+      thead { display: none; }
+
+      tbody tr {
+        display: flex;
+        flex-direction: column;
+        padding: 16px 16px;
+        border-bottom: 1px solid var(--border);
+        position: relative;
+      }
+
+      td {
+        padding: 0;
+        border-bottom: none;
+        font-size: 0.875rem;
+      }
+
+      td.rank {
+        position: absolute;
+        top: 16px; right: 16px;
+        font-size: 1.1rem;
+      }
+
+      td:nth-child(2) { margin-bottom: 6px; }
+
+      td:nth-child(3)::before {
+        content: "Баллы: ";
+        font-size: 0.72rem;
+        color: var(--muted);
+        font-weight: 400;
+      }
+
+      .user-mini-avatar { width: 28px; height: 28px; font-size: 0.65rem; }
+    }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      padding: 36px 28px;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 380px;
+      position: relative;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      background: var(--surface2); border: none;
+      color: var(--muted); cursor: pointer;
+      font-size: 1rem; width: 30px; height: 30px;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    }
+    .modal-title { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; margin: 0 0 8px; }
+    .modal-sub { color: var(--muted); font-size: 0.875rem; margin: 0 0 24px; }
+
+    @media (max-width: 640px) {
+      .header-nav { display: none; }
+      .burger { display: flex; }
+      .profile-name-text { display: none; }
+    }
+
+    @media (max-width: 380px) {
+      .header { padding: 0 14px; gap: 8px; }
+      .header-logo { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <a href="/" class="header-logo">Happy English</a>
+
+  <nav>
+    <ul class="header-nav">
+      <li>
+        <a href="/">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          Главная
+        </a>
+      </li>
+      <li>
+        <a href="/ladder" class="active">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          Рейтинг
+        </a>
+      </li>
+      <li>
+        <a href="/words">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+          Слова
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <div class="header-actions">
+    <button class="profile-btn" id="profileBtn">
+      <div class="profile-avatar" id="profileAvatar">?</div>
+      <span class="profile-name-text" id="profileName">Войти</span>
+    </button>
+
+    <div class="profile-dropdown" id="profileDropdown">
+      <div class="dropdown-header">
+        <div class="dropdown-name" id="dropdownName">—</div>
+        <div class="dropdown-username" id="dropdownUsername">@username</div>
+      </div>
+      <div class="dropdown-divider"></div>
+      <a href="/words" class="dropdown-item">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+        Мои слова
+      </a>
+      <a href="/ladder?search={{ tg_user.username if tg_user and tg_user.username else tg_user.first_name }}" class="dropdown-item">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          Мой рейтинг
+      </a>
+      <button class="dropdown-item" id="logoutBtn"
+        style="width:100%;text-align:left;background:none;border:none;color:#ff5c5c;cursor:pointer;font-family:inherit;">
+        Выйти
+      </button>
+    </div>
+  </div>
+
+  <!-- Burger (mobile) -->
+  <button class="burger" id="burgerBtn" aria-label="Меню">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<!-- Mobile navigation drawer -->
+<nav class="mobile-nav" id="mobileNav">
+  <a href="/">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+    Главная
+  </a>
+  <a href="/ladder" class="active">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    Рейтинг
+  </a>
+  <a href="/words">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+    Слова
+  </a>
+</nav>
+
+<!-- Auth modal -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">✕</button>
+    <h2 class="modal-title">Авторизация</h2>
+    <p class="modal-sub">Войдите через Telegram</p>
+    <script async src="https://telegram.org/js/telegram-widget.js?22"
+            data-telegram-login="lhenglish_bot" data-size="large"
+            data-auth-url="/auth/telegram" data-request-access="write"></script>
+  </div>
+</div>
+
+<main class="container">
+  <div class="page-header">
+    <h1 class="section-title">🏆 Таблица лидеров</h1>
+    <p class="section-sub">Лучшие ученики этой недели</p>
+  </div>
+
+  <!-- Search bar -->
+  <div class="search-wrap">
+    <span class="search-icon">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </span>
+    <input
+      type="text"
+      class="search-input"
+      id="searchInput"
+      placeholder="Поиск по имени..."
+      autocomplete="off"
+      spellcheck="false"
+    />
+  </div>
+
+  <div class="search-count" id="searchCount"></div>
+
+  <div class="table-wrap">
+    <table id="leaderTable">
+      <thead>
+        <tr>
+          <th>Место</th>
+          <th>Пользователь</th>
+          <th>Баллы</th>
+        </tr>
+      </thead>
+      <tbody id="leaderBody">
+        {% for i in range(names|length) %}
+        <tr data-name="{{ names[i]|lower }}" data-username="{{ usernames[i]|lower if usernames[i] else '' }}">
+          <td class="rank {% if i == 0 %}rank-1{% elif i == 1 %}rank-2{% elif i == 2 %}rank-3{% else %}rank-other{% endif %}">
+            {% if i == 0 %}🥇{% elif i == 1 %}🥈{% elif i == 2 %}🥉{% else %}#{{ i+1 }}{% endif %}
+          </td>
+          <td>
+            <div class="user-cell">
+              <div class="user-mini-avatar">{{ names[i][0]|upper if names[i] else '?' }}</div>
+              <span>{{ names[i] }}</span>
+            </div>
+          </td>
+          <td class="points">{{ quizzes[i] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="no-results" id="noResults" style="display:none;">
+      <div class="no-results-icon">🔍</div>
+      Никого не найдено
+    </div>
+  </div>
+</main>
+
+<script>
+  const TG_USER = {{ tg_user | tojson | safe if tg_user else 'null' }};
+
+  /* ── Profile ── */
+  const profileBtn = document.getElementById('profileBtn');
+  const profileDropdown = document.getElementById('profileDropdown');
+  const authModal = document.getElementById('authModal');
+
+  function applyUser(user) {
+    if (!user) return;
+    document.getElementById('profileName').textContent = user.first_name;
+    const dn = document.getElementById('dropdownName');
+    if (dn) dn.textContent = user.first_name;
+    if (user.username) document.getElementById('dropdownUsername').textContent = '@' + user.username;
+    const avatar = document.getElementById('profileAvatar');
+    if (user.photo_url) {
+      avatar.innerHTML = `<img src="${user.photo_url}" alt="">`;
+    } else {
+      avatar.textContent = user.first_name.charAt(0).toUpperCase();
+    }
+  }
+
+  profileBtn.onclick = (e) => {
+    e.stopPropagation();
+    if (TG_USER) profileDropdown.classList.toggle('open');
+    else authModal.classList.add('open');
+  };
+
+  document.getElementById('modalClose').onclick = () => authModal.classList.remove('open');
+  document.getElementById('logoutBtn').onclick = () => window.location.href = '/auth/logout';
+
+  window.addEventListener('click', () => {
+    profileDropdown.classList.remove('open');
+    // close mobile nav on outside click
+  });
+  authModal.onclick = (e) => { if (e.target === authModal) authModal.classList.remove('open'); };
+
+  applyUser(TG_USER);
+
+  /* ── Burger / Mobile nav ── */
+  const burgerBtn = document.getElementById('burgerBtn');
+  const mobileNav = document.getElementById('mobileNav');
+
+  burgerBtn.onclick = (e) => {
+    e.stopPropagation();
+    burgerBtn.classList.toggle('open');
+    mobileNav.classList.toggle('open');
+  };
+
+  document.addEventListener('click', (e) => {
+    if (!mobileNav.contains(e.target) && !burgerBtn.contains(e.target)) {
+      mobileNav.classList.remove('open');
+      burgerBtn.classList.remove('open');
+    }
+  });
+
+  /* ── Search ── */
+  const searchInput = document.getElementById('searchInput');
+  const leaderBody  = document.getElementById('leaderBody');
+  const noResults   = document.getElementById('noResults');
+  const searchCount = document.getElementById('searchCount');
+  const allRows     = Array.from(leaderBody.querySelectorAll('tr'));
+  const total       = allRows.length;
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    let visible = 0;
+
+    allRows.forEach(row => {
+      const name = row.getAttribute('data-name') || '';
+      const username = row.getAttribute('data-username') || '';
+      const match = !q || name.includes(q) || username.includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+
+    noResults.style.display = visible === 0 ? 'block' : 'none';
+
+    if (q) {
+      searchCount.textContent = `Найдено: ${visible} из ${total}`;
+    } else {
+      searchCount.textContent = '';
+    }
+  });
+    window.addEventListener('DOMContentLoaded', () => {
+      // 1. Проверяем, есть ли в URL параметр ?search=...
+      const urlParams = new URLSearchParams(window.location.search);
+      const searchQuery = urlParams.get('search');
+
+      if (searchQuery) {
+        // 2. Вставляем текст в поле поиска
+        searchInput.value = searchQuery;
+
+        // 3. Вызываем событие ввода вручную, чтобы сработал ваш существующий скрипт поиска
+        searchInput.dispatchEvent(new Event('input'));
+
+        // (Опционально) Можно плавно прокрутить к найденному результату
+        setTimeout(() => {
+          const firstVisibleRow = allRows.find(row => row.style.display !== 'none');
+          if (firstVisibleRow) {
+            firstVisibleRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Можно подсветить строку на секунду
+            firstVisibleRow.style.background = 'rgba(79, 142, 247, 0.2)';
+            setTimeout(() => firstVisibleRow.style.background = '', 2000);
+          }
+        }, 100);
+      }
+    });
+</script>
+</body>

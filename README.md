@@ -7,6 +7,7 @@ Happy English Bot is the tool in Telegram with tag - @lhenglish. It can help wit
 4. Press blue button in the bottom.
 5. Command /help - it can help with understanding the technology of bot to easier using.
 6. Use commands and be HAPPY!
+7. Site - We have site with statistic and more cool things that can be useful, check it please ------- https://t3roll.pythonanywhere.com/ ---------.
 
 ----------WARNING------------
 

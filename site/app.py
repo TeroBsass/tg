@@ -1,21 +1,24 @@
+from typing import LiteralString
+
 from flask import Flask, render_template, request, redirect, session, url_for, jsonify, flash
 import sqlite3 as sq
 from functools import wraps
 from contextlib import closing
 import json, random, os
+from markupsafe import Markup
 
 app = Flask(__name__)
 app.secret_key = "02002020002henglish_t9290Roll"
-ADMIN_USERNAME = "t3Roll"
-ADMIN_PASSWORD = "08070909Koch"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MAIN_DIR = os.path.dirname(BASE_DIR)
+MAIN_DIR: LiteralString = os.path.dirname(BASE_DIR)
 API_JSON = os.path.join(MAIN_DIR, "api.json")
 with open(API_JSON, "r") as js:
     data = json.load(js)
+ADMINS = data["ADMIN_PANEL"]
 DB_PODS  = os.path.join(BASE_DIR, f"{data['DB2']}")
 DB_USERS = os.path.join(BASE_DIR, f"{data['DB']}")
+DB_RATES = os.path.join(BASE_DIR, f"{data['DB3']}")
 TXT_FILE = os.path.join(MAIN_DIR, f"{data['file']}")
 
 
@@ -33,6 +36,21 @@ def init_db():
             "CREATE TABLE IF NOT EXISTS users("
             "id INTEGER, password_key TEXT, words TEXT, quiz TEXT, name TEXT, username TEXT)"
         )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS test_history(id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER, test_date TEXT, score INT, total INT, difficultly TEXT)"""
+        )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS test_details(id INTEGER PRIMARY KEY AUTOINCREMENT,
+             test_id INT, question TEXT, word TEXT, user_answer TEXT, correct_answer TEXT, is_correct INT,
+             FOREIGN KEY(test_id) REFERENCES test_history(id))"""
+        )
+        conn.commit()
+    with closing(sq.connect(DB_RATES)) as conn:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS rates("
+            "id INTEGER, interface INTEGER, speed INTEGER, helpness INTEGER, accuracy INTEGER, comment TEXT)"
+        )
         conn.commit()
 
 
@@ -44,6 +62,12 @@ def get_pods_db():
 
 def get_users_db():
     conn = sq.connect(DB_USERS)
+    conn.row_factory = sq.Row
+    return conn
+
+
+def get_rates_db():
+    conn = sq.connect(DB_RATES)
     conn.row_factory = sq.Row
     return conn
 
@@ -64,15 +88,15 @@ def worded(line):
     return word
 
 
-def transced(line):
+def transcribed(line):
     if "[" in line:
-        transc = line[line.index('['):line.index(']') + 1]
+        trans = line[line.index('['):line.index(']') + 1]
     else:
-        transc = "[отсутствует]"
-    return transc
+        trans = "[отсутствует]"
+    return trans
 
 
-def transled(line):
+def translate(line):
     if "[" in line:
         transl = line[line.index(']') + 1:-1]
     else:
@@ -96,6 +120,24 @@ def add_user(id, name, tag):
         conn.execute("""INSERT INTO users VALUES(?, ?, ?, ?, ?, ?)""", (id, password_k, "", 0, name, tag))
         conn.commit()
 
+def c_and_update(id, name, tag):
+    with closing(get_users_db()) as conn:
+        res = conn.execute("""SELECT name, username FROM users WHERE id=?""", (id, )).fetchone()
+        if name != res[0] or tag != res[1]:
+            conn.execute("""UPDATE users SET name=?, username=? WHERE id=?""", (name, tag, id))
+            conn.commit()
+
+
+@app.template_global()
+def render_stars(val):
+    val = int(val or 0)
+    stars = ''
+    for i in range(1, 6):
+        filled = i <= val
+        color = '#f59e0b' if filled else 'none'
+        stroke = '#f59e0b' if filled else '#6b7694'
+        stars += f'<svg width="14" height="14" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="{color}" stroke="{stroke}" stroke-width="1.5"/></svg>'
+    return Markup(f'<div class="stars-display">{stars}</div>')
 # 1. Маршрут, куда Telegram вернет пользователя
 @app.route("/auth/telegram")
 def auth_telegram():
@@ -110,34 +152,37 @@ def auth_telegram():
 
     if user_data["id"]:
         session["user"] = user_data # Сохраняем в сессию
+        session.pop("not_auth", None)
         flash(f"Привет, {user_data['first_name']}!", "success")
         with closing(get_users_db()) as conn:
             tag = conn.execute("""SELECT username FROM users WHERE id=?""", (user_data["id"], )).fetchone()
         if not tag:
             add_user(user_data["id"], user_data["first_name"], user_data["username"])
+        else:
+            c_and_update(user_data["id"], user_data["first_name"], user_data["username"])
     return redirect(url_for("main"))
 
-# 2. Обновите маршрут выхода
 @app.route("/auth/logout")
 def auth_logout():
     session.pop("user", None)
     return redirect(url_for("main"))
 
-# 3. Убедитесь, что главная страница видит сессию
 @app.route("/")
 def main():
-    user_data = session.get("user") # Если нет пользователя, будет None
+    user_data = session.get("user")
+    na = session.get("not_auth")
     with closing(get_users_db()) as conn:
         user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-    return render_template("main.html", tg_user=user_data, user_count=user_count)
+    return render_template("main.html", tg_user=user_data, user_count=user_count,
+                           not_auth=na['status'] if na else None, sec=na['sec'] if na else None)
 
 
 @app.route("/api/data", methods=["POST"])
 def submit():
     if request.is_json:
-        data = request.get_json()
-        email = data.get("email")
-        message = data.get("message")
+        data_js = request.get_json()
+        email = data_js.get("email")
+        message = data_js.get("message")
     else:
         email = request.form.get("email")
         message = request.form.get("message")
@@ -154,7 +199,7 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "")
         password = request.form.get("password", "")
-        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        if username in ADMINS.keys() and password == ADMINS[username]:
             session["logged_in"] = True
             flash("Успешный вход!", "success")
             return redirect(url_for("admin_panel"))
@@ -178,7 +223,11 @@ def admin_panel():
         messages = conn.execute(
             "SELECT id, email, message FROM pods ORDER BY id DESC"
         ).fetchall()
-    return render_template("admin.html", messages=messages)
+    with closing(get_rates_db()) as conn:
+        reviews = conn.execute(
+            """SELECT * FROM rates"""
+        ).fetchall()
+    return render_template("admin.html", messages=messages, reviews=reviews)
 
 
 @app.route("/delete_message", methods=["POST"])
@@ -201,7 +250,7 @@ def laddered():
     user_data = session.get('user')
     with closing(get_users_db()) as conn:
         rows = conn.execute(
-            "SELECT quiz, name, username FROM users ORDER BY quiz DESC"
+            "SELECT quiz, name, username FROM users ORDER BY CAST(quiz AS INTEGER) DESC"
         ).fetchall()
     names, quizzes, usernames = [], [], []
     for row in rows:
@@ -217,26 +266,113 @@ def laddered():
 @app.route("/words")
 def words():
     user_data = session.get('user')
+    trans, words_, transl = [], [], []
+
     if not user_data:
-        flash("Пожалуйста, войдите, чтобы просмотреть свои слова", "error")
+        not_data: dict[str, bool | str] = {"status": True, "sec": "Слова"}
+        session["not_auth"] = not_data
         return redirect(url_for("main"))
-    words, transc, transl = [], [], []
     with closing(get_users_db()) as conn:
         words_indexes_str = conn.execute("""SELECT words FROM users WHERE id=?""", (user_data["id"], )).fetchone()
     if words_indexes_str and words_indexes_str["words"]:
         words_indexes = result(words_indexes_str)
+        if not words_indexes:
+            words_indexes = ""
         try:
             with open(TXT_FILE, "r") as f:
                 all_words = f.readlines()
             for i in words_indexes:
                 if 0 <= i < len(all_words):
                     line = all_words[i]
-                    words.append(worded(line))
-                    transc.append(transced(line))
-                    transl.append(transled(line))
+                    words_.append(worded(line))
+                    trans.append(transcribed(line))
+                    transl.append(translate(line))
         except FileNotFoundError:
             flash("нет файла", "error")
-    return render_template("words.html", words=words, transc=transc, transl=transl, tg_user=user_data)
+    return render_template("words.html", words=words_, transc=trans, transl=transl, tg_user=user_data)
+
+
+@app.route("/review")
+def review():
+    user_data = session.get("user")
+
+    if not user_data:
+        not_data = {"status": True, "sec": "Оценка"}
+        session["not_auth"] = not_data
+        return redirect(url_for("main"))
+
+    return render_template("site_rate.html", tg_user=user_data)
+
+
+@app.route("/review/data", methods=["POST"])
+def submit_2():
+    try:
+        user_data = session.get("user")
+        data_rate = request.get_json()
+        id = user_data["id"]
+        interface = data_rate.get("interface")
+        speed = data_rate.get("speed")
+        helpness = data_rate.get("helpness")
+        accuracy = data_rate.get("accuracy")
+        comment = data_rate.get("comment", "")
+        with closing(get_rates_db()) as conn:
+            com = conn.execute("""SELECT comment FROM rates WHERE id=?""", (id, )).fetchone()
+            if not com:
+                conn.execute("""INSERT INTO rates VALUES(?, ?, ?, ?, ?, ?)""", (id, interface, speed, helpness, accuracy, comment))
+            else:
+                conn.execute("""UPDATE rates SET interface=?, speed=?, helpness=?, accuracy=?, comment=? WHERE id=?""", (interface, speed, helpness, accuracy, comment, id))
+            conn.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/tests")
+def tests():
+    user_data = session.get("user")
+    if not user_data:
+        not_auth: dict[str, bool | str] = {"status": True, "sec": "Тесты"}
+        session["not_auth"] = not_auth
+        return redirect(url_for("main"))
+    with closing(get_users_db()) as conn:
+        tests_data = conn.execute("""SELECT * FROM test_history WHERE user_id=? ORDER BY test_date DESC""", (user_data["id"], )).fetchall()
+    diff_map = {3: "easy", 2: "medium", 1: "hard"}
+    tests = [{
+            "id": i["id"],
+            "name": i['test_date'],
+            "difficulty": diff_map.get(int(i["difficultly"]), "medium"),
+            "question_count": i["total"],
+            "locked": False,
+            "progress": round(i["score"] / i["total"] * 100) if i["total"] else 0
+        }
+        for i in tests_data
+    ]
+    return render_template("tests.html", tg_user=user_data, tests=tests)
+
+
+@app.route("/api/test/<int:test_id>")
+def api_test(test_id):
+    if not session.get("user"):
+        return {"error": "unauthorized"}, 401
+
+    with closing(get_users_db()) as conn:
+        details = conn.execute(
+            "SELECT * FROM test_details WHERE test_id=?", (test_id,)
+        ).fetchall()
+
+    return {
+        "questions": [
+            {
+                "id": d["id"],
+                "text": d["question"],
+                "word": d["word"],
+                "user_answer": d["user_answer"],
+                "correct_answer": d["correct_answer"],
+                "is_correct": bool(d["is_correct"])
+            }
+            for d in details
+        ]
+    }
 
 
 if __name__ == "__main__":

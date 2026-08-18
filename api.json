@@ -6,8 +6,13 @@
     7821882238,
     6112329359
   ],
+  "ADMIN_PANEL": {
+      "t3Roll": "08070909Koch",
+      "terobass": "teroTitan09"
+  },
   "DB": "users.db",
   "DB2": "pods.db",
+  "DB3": "rates.db",
   "html": "learned_words.html",
   "file2": "output_bot.txt",
   "D_API": "f4fdb52c81fe8fa367a909b01cd12bfd",

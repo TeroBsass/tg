@@ -13,4 +13,8 @@ Happy English Bot is the tool in Telegram with tag - @lhenglish. It can help wit
 
 Bot doesn't have any paid features.You can find another bot that looking like mine. BUT BE CAREFUL - DON'T SPENT MONEY IN UNVERIFIED SOURCES.
 
+---------PS------------------
+
+All bot's code is for hosting, so it can give an error without necessary struction.
+
 THANK YOU FOR READING!!!!!!

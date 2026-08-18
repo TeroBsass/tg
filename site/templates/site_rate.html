@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Оценить бота — Happy English</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/icon.jpeg') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0d0f14;
+      --surface:   #161923;
+      --surface2:  #1e2330;
+      --border:    rgba(255,255,255,0.07);
+      --accent:    #4f8ef7;
+      --accent2:   #7c5df9;
+      --green:     #3ecf8e;
+      --text:      #e8ecf4;
+      --muted:     #6b7694;
+      --radius:    14px;
+      --header-h:  68px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      padding-top: var(--header-h);
+      background-image:
+        url("data:image/svg+xml,%3Csvg width='400' height='400' xmlns='http://www.w3.org/2000/svg'%3E%3Cstyle%3E .l %7B fill: rgba(255, 255, 255, 0.03); font-family: 'Syne', sans-serif; font-weight: 800; %7D %3C/style%3E%3Ctext x='50' y='80' font-size='40' class='l' transform='rotate(-20 50 80)'%3EA%3C/text%3E%3Ctext x='250' y='120' font-size='60' class='l' transform='rotate(15 250 120)'%3EZ%3C/text%3E%3Ctext x='120' y='280' font-size='30' class='l' transform='rotate(-45 120 280)'%3EB%3C/text%3E%3Ctext x='320' y='350' font-size='50' class='l' transform='rotate(10 320 350)'%3ER%3C/text%3E%3Ctext x='40' y='360' font-size='25' class='l' transform='rotate(30 40 360)'%3EH%3C/text%3E%3Ctext x='200' y='50' font-size='35' class='l' transform='rotate(-10 200 50)'%3EK%3C/text%3E%3C/svg%3E"),
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 400px 400px, 40px 40px, 40px 40px;
+      background-attachment: fixed;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-h);
+      background: rgba(13,15,20,0.92);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+    }
+
+    .header-logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      text-decoration: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border-radius: 10px;
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      margin-left: 16px;
+      border: 1px solid transparent;
+    }
+    .back-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .back-btn svg { flex-shrink: 0; }
+
+    .header-actions { margin-left: auto; position: relative; flex-shrink: 0; }
+
+    .header-actions { margin-left: auto; position: relative; flex-shrink: 0; }
+
+    .profile-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 12px 5px 5px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 40px;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      font-size: 0.875rem;
+    }
+    .profile-btn:hover { border-color: rgba(255,255,255,0.15); }
+
+    .profile-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.75rem;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* ── PROFILE DROPDOWN ── */
+    .profile-dropdown {
+      position: absolute;
+      top: calc(100% + 12px);
+      right: 0;
+      min-width: 220px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px;
+      display: none;
+      flex-direction: column;
+      z-index: 150;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+    }
+    .profile-dropdown.open { display: flex; }
+
+    .dropdown-header { padding: 8px 10px 10px; }
+    .dropdown-name { font-weight: 600; font-size: 0.9rem; }
+    .dropdown-username { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .dropdown-divider { height: 1px; background: var(--border); margin: 6px 0; }
+
+    .dropdown-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 9px 10px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: var(--text);
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s;
+      border: none; background: none; width: 100%; text-align: left;
+    }
+    .dropdown-item:hover { background: var(--surface2); }
+    .dropdown-item.danger { color: #f26464; }
+    /* ── BURGER ── */
+    .burger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 36px; height: 36px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      padding: 8px;
+      flex-shrink: 0;
+    }
+    .burger span { display: block; height: 2px; background: var(--text); border-radius: 2px; }
+
+    /* ── MOBILE NAV ── */
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      top: var(--header-h);
+      left: 0; right: 0;
+      background: rgba(13,15,20,0.97);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+      z-index: 99;
+      padding: 12px 16px 16px;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .mobile-nav.open { display: flex; }
+    .mobile-nav a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.95rem; font-weight: 500;
+      transition: all 0.2s;
+    }
+    .mobile-nav a:hover { background: var(--surface2); color: var(--text); }
+
+    /* ── MAIN CONTENT ── */
+    .page-wrap {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 60px 24px 80px;
+    }
+
+    /* ── PAGE HEADER ── */
+    .page-header {
+      margin-bottom: 40px;
+      animation: fadeUp 0.5s ease both;
+    }
+    .page-tag {
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 10px;
+    }
+    .page-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.8rem, 5vw, 2.6rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+      line-height: 1.15;
+    }
+    .page-title .grad {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .page-sub {
+      color: var(--muted);
+      font-size: 0.93rem;
+      line-height: 1.65;
+    }
+
+    /* ── REVIEW FORM ── */
+    .review-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ── CATEGORY CARD ── */
+    .category-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      transition: border-color 0.25s, box-shadow 0.25s;
+      animation: fadeUp 0.5s ease both;
+    }
+    .category-card:nth-child(1) { animation-delay: 0.1s; }
+    .category-card:nth-child(2) { animation-delay: 0.18s; }
+    .category-card:nth-child(3) { animation-delay: 0.26s; }
+    .category-card:nth-child(4) { animation-delay: 0.34s; }
+    .category-card.rated {
+      border-color: rgba(79,142,247,0.3);
+      box-shadow: 0 4px 24px rgba(79,142,247,0.08);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .card-icon {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(79,142,247,0.15), rgba(124,93,249,0.15));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+    .card-info { flex: 1; min-width: 0; }
+    .card-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem; font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .card-desc {
+      font-size: 0.8rem; color: var(--muted); line-height: 1.45;
+    }
+
+    /* ── SCORE BADGE ── */
+    .score-badge {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.82rem; font-weight: 700;
+      color: var(--muted);
+      min-width: 32px;
+      text-align: right;
+      transition: color 0.2s;
+      flex-shrink: 0;
+    }
+    .score-badge.active { color: var(--accent); }
+
+    /* ── STARS ── */
+    .stars {
+      display: flex;
+      gap: 8px;
+    }
+    .star-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      transition: transform 0.15s;
+      line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .star-btn:hover { transform: scale(1.2); }
+    .star-btn:active { transform: scale(0.9); }
+
+    .star-btn svg {
+      width: 30px; height: 30px;
+      transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .star-btn svg .star-fill {
+      fill: none;
+      stroke: var(--muted);
+      stroke-width: 1.5;
+      transition: all 0.18s;
+    }
+    .star-btn.lit svg .star-fill {
+      fill: #f59e0b;
+      stroke: #f59e0b;
+      filter: drop-shadow(0 0 6px rgba(245,158,11,0.5));
+    }
+    .star-btn.lit svg {
+      transform: scale(1.1);
+    }
+
+    /* ── RATING LABEL ── */
+    .rating-label {
+      margin-top: 12px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      min-height: 16px;
+      transition: color 0.2s;
+    }
+
+    /* ── COMMENT SECTION ── */
+    .comment-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      animation: fadeUp 0.5s 0.42s ease both;
+    }
+    .comment-label {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem; font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .comment-sub {
+      font-size: 0.8rem; color: var(--muted); margin-bottom: 14px;
+    }
+    .comment-textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      resize: vertical;
+      min-height: 90px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .comment-textarea:focus { border-color: var(--accent); }
+    .comment-textarea::placeholder { color: var(--muted); }
+
+    /* ── SUBMIT BUTTON ── */
+    .submit-wrap {
+      animation: fadeUp 0.5s 0.5s ease both;
+    }
+    .btn-submit {
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 9px;
+      padding: 15px 28px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; font-weight: 600; font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      border-radius: 10px; border: none; cursor: pointer;
+      box-shadow: 0 0 28px rgba(79,142,247,0.3);
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+    }
+    .btn-submit:hover:not(:disabled) {
+      opacity: 0.92;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 36px rgba(79,142,247,0.45);
+    }
+    .btn-submit:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* ── PROGRESS BAR ── */
+    .progress-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      height: 5px;
+      overflow: hidden;
+      margin-bottom: 32px;
+      animation: fadeUp 0.5s 0.05s ease both;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 50px;
+      width: 0%;
+      transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* ── SUCCESS STATE ── */
+    .success-overlay {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 60px 20px;
+      animation: fadeUp 0.5s ease both;
+    }
+    .success-overlay.show { display: flex; }
+    .success-icon {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: rgba(62,207,142,0.1);
+      border: 2px solid rgba(62,207,142,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.2rem;
+      margin-bottom: 24px;
+      animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes popIn {
+      from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+    .success-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem; font-weight: 800;
+      margin-bottom: 10px;
+    }
+    .success-text { color: var(--muted); font-size: 0.9rem; line-height: 1.65; max-width: 320px; }
+    .success-stars {
+      display: flex; gap: 6px;
+      margin: 20px 0;
+    }
+    .success-stars svg { width: 22px; height: 22px; }
+    .btn-back-home {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; font-weight: 600; font-size: 0.9rem;
+      border-radius: 10px; border: none; cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.15s;
+      margin-top: 8px;
+    }
+    .btn-back-home:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 640px) {
+      .back-btn span { display: none; }
+      .burger { display: flex !important; }
+      .header { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════ HEADER ════ -->
+<header class="header">
+  <a href="/" class="header-logo">Happy English</a>
+
+  <a href="/" class="back-btn">
+    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+    <span>Вернуться</span>
+  </a>
+
+  <div class="header-actions">
+    <button class="profile-btn" id="profileBtn">
+      <div class="profile-avatar" id="profileAvatar">?</div>
+      <span class="profile-name" id="profileName">Войти</span>
+    </button>
+
+    <div class="profile-dropdown" id="profileDropdown">
+      <div class="dropdown-header">
+        <div class="dropdown-name" id="dropdownName">—</div>
+        <div class="dropdown-username" id="dropdownUsername">@username</div>
+      </div>
+      <div class="dropdown-divider"></div>
+      <a href="/words" class="dropdown-item">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+        Мои слова
+      </a>
+      <a href="/ladder?search={{ tg_user.username if tg_user and tg_user.username else tg_user.first_name }}" class="dropdown-item">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          Мой рейтинг
+      </a>
+      <div class="dropdown-divider"></div>
+      <button class="dropdown-item danger" id="logoutBtn"
+        style="border:none;background:none;width:100%;text-align:left;font-family:inherit;cursor:pointer;">
+        Выйти
+      </button>
+    </div>
+  </div>
+
+  <button class="burger" id="burgerBtn" aria-label="Меню">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<!-- Mobile nav -->
+<nav class="mobile-nav" id="mobileNav">
+  <a href="/">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+    Вернуться на главную
+  </a>
+</nav>
+
+<!-- ════ MAIN ════ -->
+<main class="page-wrap">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div class="page-tag">Ваше мнение</div>
+    <h1 class="page-title">Оцените <span class="grad">бота</span></h1>
+    <p class="page-sub">Расскажите, что думаете — это помогает нам становиться лучше.</p>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress-wrap">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <!-- Form -->
+  <div id="formContent">
+    <div class="review-form" id="reviewForm">
+
+      <!-- Интерфейс -->
+      <div class="category-card" data-category="interface">
+        <div class="card-top">
+          <div class="card-icon">🎨</div>
+          <div class="card-info">
+            <div class="card-name">Интерфейс</div>
+            <div class="card-desc">Насколько удобно и приятно пользоваться ботом</div>
+          </div>
+          <div class="score-badge" id="badge-interface">—</div>
+        </div>
+        <div class="stars" data-group="interface">
+          <button class="star-btn" data-val="1" aria-label="1 звезда">
+            <svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </button>
+          <button class="star-btn" data-val="2" aria-label="2 звезды">
+            <svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </button>
+          <button class="star-btn" data-val="3" aria-label="3 звезды">
+            <svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </button>
+          <button class="star-btn" data-val="4" aria-label="4 звезды">
+            <svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </button>
+          <button class="star-btn" data-val="5" aria-label="5 звёзд">
+            <svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </button>
+        </div>
+        <div class="rating-label" id="label-interface">Нажмите на звезду, чтобы оценить</div>
+      </div>
+
+      <!-- Скорость -->
+      <div class="category-card" data-category="speed">
+        <div class="card-top">
+          <div class="card-icon">⚡</div>
+          <div class="card-info">
+            <div class="card-name">Скорость</div>
+            <div class="card-desc">Как быстро бот отвечает и обрабатывает запросы</div>
+          </div>
+          <div class="score-badge" id="badge-speed">—</div>
+        </div>
+        <div class="stars" data-group="speed">
+          <button class="star-btn" data-val="1" aria-label="1 звезда"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+          <button class="star-btn" data-val="2" aria-label="2 звезды"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+          <button class="star-btn" data-val="3" aria-label="3 звезды"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+          <button class="star-btn" data-val="4" aria-label="4 звезды"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+          <button class="star-btn" data-val="5" aria-label="5 звёзд"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+        </div>
+        <div class="rating-label" id="label-speed">Нажмите на звезду, чтобы оценить</div>
+      </div>
+
+      <!-- Полезность -->
+      <div class="category-card" data-category="usefulness">
+        <div class="card-top">
+          <div class="card-icon">📚</div>
+          <div class="card-info">
+            <div class="card-name">Полезность</div>
+            <div class="card-desc">Насколько бот помогает изучать английский эффективно</div>
+          </div>
+          <div class="score-badge" id="badge-usefulness">—</div>
+        </div>
+        <div class="stars" data-group="usefulness">
+          <button class="star-btn" data-val="1" aria-label="1 звезда"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+          <button class="star-btn" data-val="2" aria-label="2 звезды"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+          <button class="star-btn" data-val="3" aria-label="3 звезды"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+          <button class="star-btn" data-val="4" aria-label="4 звезды"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+          <button class="star-btn" data-val="5" aria-label="5 звёзд"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+        </div>
+        <div class="rating-label" id="label-usefulness">Нажмите на звезду, чтобы оценить</div>
+      </div>
+
+      <!-- Точность -->
+      <div class="category-card" data-category="accuracy">
+        <div class="card-top">
+          <div class="card-icon">🎯</div>
+          <div class="card-info">
+            <div class="card-name">Точность</div>
+            <div class="card-desc">Правильность слов, переводов и упражнений</div>
+          </div>
+          <div class="score-badge" id="badge-accuracy">—</div>
+        </div>
+        <div class="stars" data-group="accuracy">
+          <button class="star-btn" data-val="1" aria-label="1 звезда"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+          <button class="star-btn" data-val="2" aria-label="2 звезды"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+          <button class="star-btn" data-val="3" aria-label="3 звезды"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+          <button class="star-btn" data-val="4" aria-label="4 звезды"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+          <button class="star-btn" data-val="5" aria-label="5 звёзд"><svg viewBox="0 0 24 24"><polygon class="star-fill" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+        </div>
+        <div class="rating-label" id="label-accuracy">Нажмите на звезду, чтобы оценить</div>
+      </div>
+
+      <!-- Комментарий -->
+      <div class="comment-section">
+        <div class="comment-label">Комментарий <span style="color:var(--muted);font-weight:400;font-size:0.82rem;">(необязательно)</span></div>
+        <div class="comment-sub">Напишите всё, что хотите сказать — мы читаем каждый отзыв</div>
+        <textarea class="comment-textarea" id="commentField" placeholder="Что понравилось, что можно улучшить..."></textarea>
+      </div>
+
+      <!-- Submit -->
+      <div class="submit-wrap">
+        <button class="btn-submit" id="submitBtn" disabled>
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Оценить все категории, чтобы отправить
+        </button>
+      </div>
+
+    </div><!-- /reviewForm -->
+  </div><!-- /formContent -->
+
+  <!-- Success state -->
+  <div class="success-overlay" id="successOverlay">
+    <div class="success-icon">✓</div>
+    <div class="success-title">Спасибо!</div>
+    <div class="success-stars" id="successStars"></div>
+    <p class="success-text">Ваша оценка отправлена. Это помогает нам делать бота лучше для всех пользователей.</p>
+    <a href="/" class="btn-back-home" style="margin-top:28px;">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+      На главную
+    </a>
+  </div>
+
+</main>
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<script>
+  window.TG_USER = {{ tg_user | tojson | safe if tg_user else 'null' }};
+  const LABELS = {
+    1: 'Очень плохо',
+    2: 'Плохо',
+    3: 'Нормально',
+    4: 'Хорошо',
+    5: 'Отлично'
+  };
+
+  const ratings = { interface: 0, speed: 0, usefulness: 0, accuracy: 0 };
+  const TOTAL = Object.keys(ratings).length;
+
+  function getRated() {
+    return Object.values(ratings).filter(v => v > 0).length;
+  }
+
+  function updateProgress() {
+    const pct = (getRated() / TOTAL) * 100;
+    document.getElementById('progressBar').style.width = pct + '%';
+    const btn = document.getElementById('submitBtn');
+    if (getRated() === TOTAL) {
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+        Отправить отзыв`;
+    } else {
+      btn.disabled = true;
+      const left = TOTAL - getRated();
+      btn.innerHTML = `
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        Оцените ещё ${left} ${left === 1 ? 'категорию' : left < 5 ? 'категории' : 'категорий'}`;
+    }
+  }
+
+  function setStars(group, val) {
+    const container = document.querySelector(`.stars[data-group="${group}"]`);
+    container.querySelectorAll('.star-btn').forEach(btn => {
+      btn.classList.toggle('lit', parseInt(btn.dataset.val) <= val);
+    });
+
+    const badge = document.getElementById(`badge-${group}`);
+    const label = document.getElementById(`label-${group}`);
+    badge.textContent = val + ' / 5';
+    badge.classList.add('active');
+    label.textContent = LABELS[val];
+    label.style.color = val >= 4 ? 'var(--green)' : val === 3 ? 'var(--accent)' : '#f26464';
+
+    const card = document.querySelector(`.category-card[data-category="${group}"]`);
+    card.classList.add('rated');
+
+    ratings[group] = val;
+    updateProgress();
+  }
+
+  // Hover preview
+  document.querySelectorAll('.stars').forEach(container => {
+    const group = container.dataset.group;
+    const stars = container.querySelectorAll('.star-btn');
+
+    stars.forEach(btn => {
+      const val = parseInt(btn.dataset.val);
+
+      btn.addEventListener('mouseenter', () => {
+        stars.forEach(s => {
+          s.classList.toggle('lit', parseInt(s.dataset.val) <= val);
+        });
+      });
+
+      btn.addEventListener('mouseleave', () => {
+        const current = ratings[group];
+        stars.forEach(s => {
+          s.classList.toggle('lit', parseInt(s.dataset.val) <= current);
+        });
+      });
+
+      btn.addEventListener('click', () => {
+        setStars(group, val);
+      });
+    });
+  });
+
+  // Submit
+  document.getElementById('submitBtn').addEventListener('click', () => {
+    const avg = (Object.values(ratings).reduce((a, b) => a + b, 0) / TOTAL).toFixed(1);
+    fetch('/review/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        interface:   ratings.interface,
+        speed:       ratings.speed,
+        helpness:  ratings.usefulness,
+        accuracy:    ratings.accuracy,
+        comment:     document.getElementById('commentField').value.trim()
+      })
+    })
+    .then(r => r.json())
+    .then(result => {
+      if (result.status === 'success') {
+        const stars = document.getElementById('successStars');
+        stars.innerHTML = '';
+        for (let i = 1; i <= 5; i++) {
+          const filled = i <= Math.round(avg);
+          stars.innerHTML += `<svg viewBox="0 0 24 24" width="22" height="22">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+              fill="${filled ? '#f59e0b' : 'none'}"
+              stroke="${filled ? '#f59e0b' : '#6b7694'}"
+              stroke-width="1.5"/>
+          </svg>`;
+        }
+        document.getElementById('formContent').style.display = 'none';
+        document.getElementById('successOverlay').classList.add('show');
+        document.getElementById('progressBar').style.width = '100%';
+        document.getElementById('progressBar').style.background = 'linear-gradient(90deg, #3ecf8e, #4f8ef7)';
+      }
+    })
+    .catch(e => console.error('Error:', e));
+  });
+
+  // Burger
+  document.getElementById('burgerBtn').addEventListener('click', () => {
+    document.getElementById('mobileNav').classList.toggle('open');
+  });
+  applyUser(window.TG_USER);
+
+</script>
+
+</body>
+</html>

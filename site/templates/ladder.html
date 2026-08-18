@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Рейтинг лидеров — Happy English Bot</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/icon.jpeg') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ТВОИ ОРИГИНАЛЬНЫЕ СТИЛИ БЕЗ ИЗМЕНЕНИЙ */
+    :root {
+      --bg: #0d0f14;
+      --surface: #161923;
+      --surface2: #1e2330;
+      --border: rgba(255,255,255,0.07);
+      --accent: #4f8ef7;
+      --accent2: #7c5df9;
+      --green: #3ecf8e;
+      --text: #e8ecf4;
+      --muted: #6b7694;
+      --radius: 14px;
+      --header-h: 70px;
+    }
+    .success-msg {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      padding: 12px 14px;
+      background: rgba(62, 207, 142, 0.08);
+      border: 1px solid rgba(62, 207, 142, 0.25);
+      border-radius: 10px;
+      animation: fadeSlideIn 0.3s ease;
+    }
+
+    .success-msg__icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(62, 207, 142, 0.15);
+      border: 1px solid rgba(62, 207, 142, 0.4);
+      color: #3ecf8e;
+      font-size: 0.85rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .success-msg__title {
+      color: #3ecf8e;
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .success-msg__text {
+      color: #6b7694;
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .hero-badge span { animation: pulse 1.8s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding-top: var(--header-h);
+      min-height: 100vh;
+      background-image:
+        url("data:image/svg+xml,%3Csvg width='400' height='400' xmlns='http://www.w3.org/2000/svg'%3E%3Cstyle%3E .l %7B fill: rgba(255, 255, 255, 0.03); font-family: 'Syne', sans-serif; font-weight: 800; %7D %3C/style%3E%3Ctext x='50' y='80' font-size='40' class='l' transform='rotate(-20 50 80)'%3EA%3C/text%3E%3Ctext x='250' y='120' font-size='60' class='l' transform='rotate(15 250 120)'%3EZ%3C/text%3E%3Ctext x='120' y='280' font-size='30' class='l' transform='rotate(-45 120 280)'%3EB%3C/text%3E%3Ctext x='320' y='350' font-size='50' class='l' transform='rotate(10 320 350)'%3ER%3C/text%3E%3Ctext x='40' y='360' font-size='25' class='l' transform='rotate(30 40 360)'%3EH%3C/text%3E%3Ctext x='200' y='50' font-size='35' class='l' transform='rotate(-10 200 50)'%3EK%3C/text%3E%3C/svg%3E"),
+        linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 400px 400px, 40px 40px, 40px 40px;
+      background-attachment: fixed;
+    }
+    .support-widget { position: fixed; bottom: 24px; right: 24px; z-index: 90; }
+    .support-dot {
+      width: 50px; height: 50px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      cursor: pointer; box-shadow: 0 4px 20px rgba(79,142,247,0.4);
+      display: flex; align-items: center; justify-content: center; transition: transform 0.2s; font-size: 1.2rem;
+    }
+    .support-dot:hover { transform: scale(1.08); }
+    .support-form {
+      position: absolute; bottom: 62px; right: 0; width: 280px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px; box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+      display: none; /* Скрыто по умолчанию */
+    }
+
+    /* КРИТИЧЕСКИЕ ИСПРАВЛЕНИЯ ДЛЯ РАБОТЫ СКРИПТОВ */
+    .support-form.active { display: block !important; }
+    .profile-dropdown.open { display: flex !important; }
+    .mobile-nav.open { display: flex !important; }
+    .modal-overlay.open { display: flex !important; }
+
+    .support-form label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 5px; margin-top: 12px; }
+    .support-form label:first-child { font-size: 0.95rem; font-weight: 600; color: var(--text); margin-top: 0; }
+    .support-form input, .support-form textarea {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 9px 12px; color: var(--text); font-size: 0.85rem; outline: none;
+    }
+    .support-form button[type=submit] {
+      margin-top: 14px; width: 100%; background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; border: none; border-radius: 8px; padding: 10px; font-weight: 600; cursor: pointer;
+    }
+
+    .header {
+      position: fixed; top: 0; left: 0; right: 0; height: var(--header-h);
+      background: rgba(13,15,20,0.92); backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px); border-bottom: 1px solid var(--border);
+      z-index: 1000; display: flex; align-items: center; padding: 0 20px; gap: 12px;
+    }
+    .header-logo {
+      font-family: 'Syne', sans-serif; font-size: 1.15rem; font-weight: 800;
+      text-decoration: none; background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; white-space: nowrap; flex-shrink: 0;
+    }
+    .header-nav { display: flex; list-style: none; margin: 0 0 0 24px; padding: 0; gap: 6px; }
+    .header-nav a {
+      display: flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 10px;
+      color: var(--muted); text-decoration: none; font-weight: 500; font-size: 0.875rem; transition: all 0.2s; white-space: nowrap;
+    }
+    .header-nav a:hover { background: var(--surface2); color: var(--text); }
+    .header-nav a.active { background: rgba(79,142,247,0.12); color: var(--accent); }
+    .header-actions { margin-left: auto; position: relative; flex-shrink: 0; }
+    .profile-btn {
+      display: flex; align-items: center; gap: 10px; padding: 5px 12px 5px 5px;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 40px;
+      color: var(--text); cursor: pointer; transition: all 0.2s; font-family: inherit; font-size: 0.875rem;
+    }
+    .profile-avatar {
+      width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; overflow: hidden; flex-shrink: 0;
+    }
+    .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .burger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 36px;
+      height: 36px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      padding: 8px;
+      flex-shrink: 0;
+    }
+    .burger span {
+      display: block;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: all 0.25s;
+    }
+    .burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .burger.open span:nth-child(2) { opacity: 0; }
+    .burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+     .mobile-nav {
+      display: none;
+      position: fixed;
+      top: var(--header-h);
+      left: 0; right: 0;
+      background: rgba(13,15,20,0.97);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 12px 16px 16px;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .mobile-nav.open { display: flex; }
+    .mobile-nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .mobile-nav a:hover, .mobile-nav a.active {
+      background: var(--surface2);
+      color: var(--text);
+    }
+    .mobile-nav a.active { color: var(--accent); }
+    .empty-state-container { display: flex; justify-content: center; align-items: center; padding: 60px 20px; min-height: 400px; }
+    .empty-state-card { max-width: 450px; text-align: center; background: #1e1e2e; padding: 40px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.05); }
+    .empty-icon-pulse { width: 80px; height: 80px; background: rgba(137, 180, 250, 0.1); color: #89b4fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; position: relative; }
+    .empty-icon-pulse::after { content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 2px solid #89b4fa; opacity: 0.3; animation: pulse-ring 2s infinite; }
+    @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(1.4); opacity: 0; } }
+    .empty-title { color: #ffffff; font-size: 1.5rem; margin-bottom: 12px; }
+    .empty-text { color: #a6adc8; font-size: 0.95rem; line-height: 1.6; margin-bottom: 30px; }
+    .btn-primary-dark { background: linear-gradient(135deg, #2b3a67 0%, #1a2344 100%); color: #e0e6ed; border: 1px solid rgba(255, 255, 255, 0.1); padding: 14px 32px; border-radius: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.3s; }
+    .profile-dropdown {
+      position: absolute;
+      top: calc(100% + 12px);
+      right: 0;
+      width: 220px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      display: none;
+      flex-direction: column;
+      z-index: 1001;
+    }
+    .profile-dropdown.open { display: flex; }
+    .dropdown-header { padding: 8px 10px 10px; }
+    .dropdown-name { font-weight: 600; font-size: 0.9rem; }
+    .dropdown-username { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .dropdown-divider { height: 1px; background: var(--border); margin: 6px 0; }
+    .dropdown-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 9px 10px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: var(--text);
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s;
+      border: none; background: none; width: 100%; text-align: left;
+    }
+    .dropdown-item:hover { background: var(--surface2); }
+    .dropdown-item.danger { color: #f26464; }
+    .container { max-width: 860px; margin: 0 auto; padding: 48px 20px 60px; }
+    .section-title { font-family: 'Syne', sans-serif; font-size: clamp(1.8rem, 5vw, 2.5rem); font-weight: 800; margin: 0 0 6px; }
+    .search-wrap {
+      margin-bottom: 24px;
+      position: relative;
+    }
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+      display: flex;
+    }
+    .search-input {
+      width: 100%;
+      padding: 12px 14px 12px 42px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input::placeholder { color: var(--muted); }
+    .search-input:focus { border-color: rgba(79,142,247,0.4); box-shadow: 0 0 0 3px rgba(79,142,247,0.08); }
+    .search-count {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      min-height: 18px;
+    }
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead { display: table-header-group; }
+    th {
+      padding: 14px 20px;
+      text-align: left;
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+      background: rgba(30,35,48,0.6);
+    }
+    tbody tr {
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: rgba(79,142,247,0.04); }
+    tbody tr:last-child td { border-bottom: none; }
+    td {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+      vertical-align: middle;
+    }
+    .rank {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+      min-width: 48px;
+    }
+    .rank-1 { color: #fbbf24; }
+    .rank-2 { color: #94a3b8; }
+    .rank-3 { color: #cd7c3a; }
+    .rank-other { color: var(--muted); }
+    .user-cell { display: flex; align-items: center; gap: 10px; }
+    .user-mini-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.7rem;
+      flex-shrink: 0;
+    }
+    .points {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--green);
+    }
+    .medal { font-size: 1.1rem; }
+    /* No results */
+    .no-results {
+      padding: 48px 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .no-results-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    /* ── RESPONSIVE: CARDS MODE ON SMALL SCREENS ── */
+    @media (max-width: 520px) {
+      thead { display: none; }
+      tbody tr {
+        display: flex;
+        flex-direction: column;
+        padding: 16px 16px;
+        border-bottom: 1px solid var(--border);
+        position: relative;
+      }
+      td {
+        padding: 0;
+        border-bottom: none;
+        font-size: 0.875rem;
+      }
+      td.rank {
+        position: absolute;
+        top: 16px; right: 16px;
+        font-size: 1.1rem;
+      }
+      td:nth-child(2) { margin-bottom: 6px; }
+      td:nth-child(3)::before {
+        content: "Баллы: ";
+        font-size: 0.72rem;
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .user-mini-avatar { width: 28px; height: 28px; font-size: 0.65rem; }
+    }
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(6px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px 36px;
+      width: 360px;
+      text-align: center;
+      position: relative;
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(18px); opacity: 0 } to { transform: none; opacity: 1 } }
+
+    .modal-close {
+      position: absolute; top: 14px; right: 14px;
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      border: none;
+      background: var(--surface2);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, color 0.2s;
+    }
+    .modal-close:hover { background: var(--border); color: var(--text); }
+
+    .modal h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.4rem; font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .modal p { font-size: 0.875rem; color: var(--muted); margin-bottom: 28px; line-height: 1.55; }
+
+    #telegram-login-wrap {
+      display: flex;
+      justify-content: center;
+      min-height: 44px;
+    }
+    .footer {
+      background: var(--surface); border-top: 1px solid var(--border); padding: 40px 28px;
+    }
+    .footer-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; justify-content: space-between; align-items: flex-start;
+      flex-wrap: wrap; gap: 24px;
+    }
+    .footer h2 { font-family: 'Syne', sans-serif; font-size: 1rem; margin-bottom: 12px; }
+    .footer ul { list-style: none; }
+    .footer li { font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+    .footer a { color: var(--accent); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+    .footer .copyright { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+    @media (max-width: 640px) {
+      .header-nav { display: none; }
+      .burger { display: flex; }
+      .profile-name-text { display: none; }
+    }
+    @media (max-width: 380px) {
+      .header { padding: 0 14px; gap: 8px; }
+      .header-logo { font-size: 1rem; }
+    }
+    @media (max-width: 520px) {
+        td { padding: 12px 10px; font-size: 0.8rem; }
+        .user-cell span { white-space: normal; }/* Разрешаем перенос перевода */
+    }
+    .error-message {
+      display: block;
+      min-height: 18px;
+      font-size: 0.78rem;
+      color: #ff6b6b;
+      margin-top: -12px;
+      margin-bottom: 10px;
+      padding-left: 2px;
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .error-message.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <a href="/" class="header-logo">Happy English</a>
+
+  <nav>
+    <ul class="header-nav">
+      <li>
+        <a href="/">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          Главная
+        </a>
+      </li>
+      <li>
+        <a href="/ladder" class="active">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          Рейтинг
+        </a>
+      </li>
+      <li>
+        <a href="/words">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+          Слова
+        </a>
+      </li>
+      <li>
+        <a href="/tests">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          Тесты
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <div class="header-actions">
+    <button class="profile-btn" id="profileBtn">
+      <div class="profile-avatar" id="profileAvatar">?</div>
+      <span class="profile-name-text" id="profileName">Войти</span>
+    </button>
+
+    <div class="profile-dropdown" id="profileDropdown">
+      <div class="dropdown-header">
+        <div class="dropdown-name" id="dropdownName">—</div>
+        <div class="dropdown-username" id="dropdownUsername">@username</div>
+      </div>
+      <div class="dropdown-divider"></div>
+      <a href="/words" class="dropdown-item">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+        Мои слова
+      </a>
+      <a href="/ladder?search={{ tg_user.username if tg_user and tg_user.username else tg_user.first_name }}" class="dropdown-item">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          Мой рейтинг
+      </a>
+        <a href="/tests" class="dropdown-item">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          Мои тесты
+        </a>
+      <div class="dropdown-divider"></div>
+      <button class="dropdown-item" id="logoutBtn"
+        style="width:100%;text-align:left;background:none;border:none;color:#ff5c5c;cursor:pointer;font-family:inherit;">
+        Выйти
+      </button>
+    </div>
+  </div>
+
+  <!-- Burger (mobile) -->
+  <button class="burger" id="burgerBtn" aria-label="Меню">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<!-- Mobile navigation drawer -->
+<nav class="mobile-nav" id="mobileNav">
+  <a href="/">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+    Главная
+  </a>
+  <a href="/ladder" class="active">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    Рейтинг
+  </a>
+  <a href="/words">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+    Слова
+  </a>
+        <a href="/tests">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          Тесты
+        </a>
+</nav>
+
+<!-- Auth modal -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">✕</button>
+    <h2>Войти через Telegram</h2>
+    <p>Авторизуйтесь одним нажатием — никаких паролей. После входа вернётесь на эту страницу.</p>
+
+    <div id="telegram-login-wrap">
+      <script
+        async
+        src="https://telegram.org/js/telegram-widget.js?22"
+        data-telegram-login="lhenglish_bot"
+        data-size="large"
+        data-auth-url="/auth/telegram"
+        data-request-access="write">
+      </script>
+    </div>
+    <p style="font-size:0.78rem;color:var(--muted);margin:0;">Данные не передаются третьим лицам.</p>
+  </div>
+</div>
+
+<main class="container">
+  <div class="page-header">
+    <h1 class="section-title">🏆 Таблица лидеров</h1>
+    <p class="section-sub">Лучшие ученики этой недели</p>
+  </div>
+
+  <!-- Search bar -->
+  <div class="search-wrap">
+    <span class="search-icon">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </span>
+    <input
+      type="text"
+      class="search-input"
+      id="searchInput"
+      placeholder="Поиск по имени..."
+      autocomplete="off"
+      spellcheck="false"
+    />
+  </div>
+
+  <div class="search-count" id="searchCount"></div>
+
+  <div class="table-wrap">
+    <table id="leaderTable">
+      <thead>
+        <tr>
+          <th>Место</th>
+          <th>Пользователь</th>
+          <th>Баллы</th>
+        </tr>
+      </thead>
+      <tbody id="leaderBody">
+        {% for i in range(names|length) %}
+        <tr data-name="{{ names[i]|lower }}" data-username="{{ usernames[i]|lower if usernames[i] else '' }}">
+          <td class="rank {% if i == 0 %}rank-1{% elif i == 1 %}rank-2{% elif i == 2 %}rank-3{% else %}rank-other{% endif %}">
+            {% if i == 0 %}🥇{% elif i == 1 %}🥈{% elif i == 2 %}🥉{% else %}#{{ i+1 }}{% endif %}
+          </td>
+          <td>
+            <div class="user-cell">
+              <div class="user-mini-avatar">{{ names[i][0]|upper if names[i] else '?' }}</div>
+              <span>{{ names[i] }}</span>
+            </div>
+          </td>
+          <td class="points">{{ quizzes[i] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="no-results" id="noResults" style="display:none;">
+      <div class="no-results-icon">🔍</div>
+      Никого не найдено
+    </div>
+  </div>
+</main>
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <h2>Happy English Bot</h2>
+      <p style="font-size:0.82rem;color:var(--muted);max-width:260px;line-height:1.55;">Бесплатный Telegram-бот для изучения английского языка.</p>
+    </div>
+    <p class="copyright">© 2026 TeroBass. Все права защищены.</p>
+  </div>
+</footer>
+<div class="support-widget" tabindex="0" aria-label="Поддержка">
+  <div class="support-dot" id="supportDot" title="Написать в поддержку">💬</div>
+  <form id="supportForm" class="support-form" method="post" novalidate hidden>
+    <label>Написать в поддержку</label>
+    <label for="email">Почта</label>
+    <input type="email" id="email" name="email" placeholder="example@mail.com" required />
+    <span class="error-message"></span>
+    <label for="message">Сообщение</label>
+    <textarea id="message" name="message" rows="3" placeholder="Ваш вопрос или отзыв" required></textarea>
+    <span class="error-message"></span>
+    <button type="submit">Отправить</button>
+  </form>
+</div>
+
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+<script>
+  // Только уникальное для этой страницы:
+
+  window.TG_USER = {{ tg_user | tojson | safe if tg_user else 'null' }};
+  applyUser(window.TG_USER);
+
+  /* ── Поиск ── */
+  const searchInput = document.getElementById('searchInput');
+  const leaderBody  = document.getElementById('leaderBody');
+  const noResults   = document.getElementById('noResults');
+  const searchCount = document.getElementById('searchCount');
+  const allRows     = Array.from(leaderBody.querySelectorAll('tr'));
+  const total       = allRows.length;
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    let visible = 0;
+    allRows.forEach(row => {
+      const name     = row.getAttribute('data-name') || '';
+      const username = row.getAttribute('data-username') || '';
+      const match    = !q || name.includes(q) || username.includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    noResults.style.display = visible === 0 ? 'block' : 'none';
+    searchCount.textContent = q ? `Найдено: ${visible} из ${total}` : '';
+  });
+
+  /* ── Поиск из URL (?search=...) ── */
+  window.addEventListener('DOMContentLoaded', () => {
+    const searchQuery = new URLSearchParams(window.location.search).get('search');
+    if (searchQuery) {
+      searchInput.value = searchQuery;
+      searchInput.dispatchEvent(new Event('input'));
+      setTimeout(() => {
+        const firstVisible = allRows.find(row => row.style.display !== 'none');
+        if (firstVisible) {
+          firstVisible.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          firstVisible.style.background = 'rgba(79, 142, 247, 0.2)';
+          setTimeout(() => firstVisible.style.background = '', 2000);
+        }
+      }, 100);
+    }
+  });
+</script>
+</body>

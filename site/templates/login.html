@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Вход в админ панель</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161923;
+    --surface2: #1e2330;
+    --border: rgba(255,255,255,0.07);
+    --accent: #4f8ef7;
+    --accent2: #7c5df9;
+    --green: #3ecf8e;
+    --text: #e8ecf4;
+    --muted: #6b7694;
+    --radius: 14px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image:
+      url("data:image/svg+xml,%3Csvg width='400' height='400' xmlns='http://www.w3.org/2000/svg'%3E%3Cstyle%3E .l %7B fill: rgba(255, 255, 255, 0.03); font-family: 'Syne', sans-serif; font-weight: 800; %7D %3C/style%3E%3Ctext x='50' y='80' font-size='40' class='l' transform='rotate(-20 50 80)'%3EA%3C/text%3E%3Ctext x='250' y='120' font-size='60' class='l' transform='rotate(15 250 120)'%3EZ%3C/text%3E%3Ctext x='120' y='280' font-size='30' class='l' transform='rotate(-45 120 280)'%3EB%3C/text%3E%3Ctext x='320' y='350' font-size='50' class='l' transform='rotate(10 320 350)'%3ER%3C/text%3E%3Ctext x='40' y='360' font-size='25' class='l' transform='rotate(30 40 360)'%3EH%3C/text%3E%3Ctext x='200' y='50' font-size='35' class='l' transform='rotate(-10 200 50)'%3EK%3C/text%3E%3C/svg%3E"),
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 400px 400px, 40px 40px, 40px 40px;
+    background-attachment: fixed;
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 400px;
+    margin: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 36px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  }
+
+  .login-logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .login-subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.875rem;
+    margin-bottom: 30px;
+  }
+
+  .flash-msg {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    margin-bottom: 18px;
+    text-align: center;
+  }
+  .flash-msg.error {
+    background: rgba(255, 80, 80, 0.1);
+    border: 1px solid rgba(255, 80, 80, 0.25);
+    color: #ff6b6b;
+  }
+  .flash-msg.success {
+    background: rgba(62, 207, 142, 0.1);
+    border: 1px solid rgba(62, 207, 142, 0.25);
+    color: var(--green);
+  }
+
+  label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    margin-bottom: 18px;
+  }
+  input[type="text"]:focus,
+  input[type="password"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.12);
+  }
+
+  .btn-submit {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    margin-top: 4px;
+  }
+  .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-submit:active { transform: translateY(0); }
+</style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-logo">Happy English</div>
+    <div class="login-subtitle">Вход в панель администратора</div>
+
+    <form method="post" action="{{ url_for('login') }}">
+      <label for="username">Логин</label>
+      <input type="text" id="username" name="username" autocomplete="username" placeholder="Введите логин" required />
+
+      <label for="password">Пароль</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Введите пароль" required />
+
+      <button type="submit" class="btn-submit">Войти →</button>
+    </form>
+  </div>
+</body>
+</html>

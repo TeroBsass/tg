@@ -4,14 +4,21 @@ from flask import Flask, render_template, request, redirect, session, url_for, j
 import sqlite3 as sq
 from functools import wraps
 from contextlib import closing
+from datetime import timedelta
 import json, random, os
 from markupsafe import Markup
+import sys
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MAIN_DIR: LiteralString = os.path.dirname(BASE_DIR)
+sys.path.insert(0, MAIN_DIR)
+from bot_core import demo_reply
 
 app = Flask(__name__)
 app.secret_key = "02002020002henglish_t9290Roll"
+app.permanent_session_lifetime = timedelta(days=30)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MAIN_DIR: LiteralString = os.path.dirname(BASE_DIR)
+
+
 API_JSON = os.path.join(MAIN_DIR, "api.json")
 with open(API_JSON, "r") as js:
     data = json.load(js)
@@ -20,6 +27,8 @@ DB_PODS  = os.path.join(BASE_DIR, f"{data['DB2']}")
 DB_USERS = os.path.join(BASE_DIR, f"{data['DB']}")
 DB_RATES = os.path.join(BASE_DIR, f"{data['DB3']}")
 TXT_FILE = os.path.join(MAIN_DIR, f"{data['file']}")
+
+DEMO_CHAT_LIMIT = 5
 
 
 def init_db():
@@ -138,6 +147,8 @@ def render_stars(val):
         stroke = '#f59e0b' if filled else '#6b7694'
         stars += f'<svg width="14" height="14" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="{color}" stroke="{stroke}" stroke-width="1.5"/></svg>'
     return Markup(f'<div class="stars-display">{stars}</div>')
+
+
 # 1. Маршрут, куда Telegram вернет пользователя
 @app.route("/auth/telegram")
 def auth_telegram():
@@ -151,7 +162,7 @@ def auth_telegram():
     }
 
     if user_data["id"]:
-        session["user"] = user_data # Сохраняем в сессию
+        session["user"] = user_data  # Сохраняем в сессию
         session.pop("not_auth", None)
         flash(f"Привет, {user_data['first_name']}!", "success")
         with closing(get_users_db()) as conn:
@@ -162,10 +173,12 @@ def auth_telegram():
             c_and_update(user_data["id"], user_data["first_name"], user_data["username"])
     return redirect(url_for("main"))
 
+
 @app.route("/auth/logout")
 def auth_logout():
     session.pop("user", None)
     return redirect(url_for("main"))
+
 
 @app.route("/")
 def main():
@@ -192,6 +205,45 @@ def submit():
         conn.execute("INSERT INTO pods (email, message) VALUES (?, ?)", (email, message))
         conn.commit()
     return jsonify({"status": "success"})
+
+
+@app.route("/api/demo-chat", methods=["POST"])
+def demo_chat():
+    session.permanent = True
+    count = session.get("demo_chat_count", 0)
+
+    if count >= DEMO_CHAT_LIMIT:
+        return jsonify({"status": "error", "error": "limit_reached",
+                        "message": "Демо-лимит исчерпан. Продолжите в Telegram."}), 403
+
+    payload = request.get_json(silent=True) or {}
+    text = (payload.get("message") or "").strip()
+
+    if not text:
+        return jsonify({"status": "error", "message": "Пустое сообщение"}), 400
+
+    if len(text) > 200:
+        text = text[:200]
+
+    user_data = session.get("user")
+    real_user_id = user_data["id"] if user_data else None
+
+    try:
+        replies = demo_reply(text, user_id=real_user_id)
+    except Exception as ex:
+        print(f"[demo_chat] error: {ex}")
+        replies = ["Не смог обработать это сообщение, попробуйте другое слово."]
+
+    count += 1
+    session["demo_chat_count"] = count
+
+    return jsonify({
+        "status": "success",
+        "replies": replies,          # ← теперь массив вместо одной строки "reply"
+        "count": count,
+        "limit": DEMO_CHAT_LIMIT,
+        "limit_reached": count >= DEMO_CHAT_LIMIT
+    })
 
 
 @app.route("/admin", methods=["GET", "POST"])
